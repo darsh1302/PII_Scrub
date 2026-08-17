@@ -368,6 +368,52 @@ size with:</p>
 </code></pre>
 <p>Uploading through the UI bypasses the scan-root allowlist, since you supplied the
 bytes directly. Scanning by path requires the file to be inside a configured root.</p>
+<h2>Public demo deployment (Streamlit Community Cloud)</h2>
+<p>Community Cloud apps are publicly reachable and this application has no sign-in.
+Demo mode reduces what an anonymous visitor can reach; it does not establish who
+they are. Do not point it at real data.</p>
+<p>Set these in <strong>App settings → Secrets</strong>:</p>
+<pre><code class="language-toml">OPENAI_API_KEY = &quot;sk-...&quot;
+PII_AGENT_TOKEN_VAULT_SALT = &quot;&lt;64 hex characters&gt;&quot;
+PII_AGENT_DEMO_MODE = &quot;true&quot;
+PII_AGENT_ALLOW_REMOTE = &quot;true&quot;
+PII_AGENT_BIND_ADDRESS = &quot;0.0.0.0&quot;
+PII_AGENT_SPACY_MODEL = &quot;en_core_web_sm&quot;
+PII_AGENT_AUDIT_DIR = &quot;audit&quot;
+</code></pre>
+<p>What demo mode changes, all enforced in code rather than by the banner:</p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scan roots forced empty</td>
+<td>Every filesystem path is refused; uploads only</td>
+</tr>
+<tr>
+<td>Upload cap 64 KB</td>
+<td>The host throttles above ~690 MB RAM with 2 CPU cores</td>
+</tr>
+<tr>
+<td><code>maxUploadSize = 1</code> in <code>.streamlit/config.toml</code></td>
+<td>Independent server-side ceiling</td>
+</tr>
+<tr>
+<td>Banner above the uploader</td>
+<td>States plainly that there is no sign-in</td>
+</tr>
+</tbody>
+</table>
+<p><code>PII_AGENT_SPACY_MODEL=en_core_web_sm</code> swaps the 600 MB NER model for a 12 MB one.
+This is a real accuracy loss — fewer personal names are detected — so the model
+actually used is recorded in every result and audit record, and the health panel
+reports the substitution rather than hiding it.</p>
+<p>Your API key is spent by anyone who uses the app. Set a spend limit on the OpenAI
+account before sharing the URL.</p>
 <h2>Development notes</h2>
 <p>Restart Streamlit after editing <code>agent/prompts.py</code> or <code>agent/graph.py</code>.
 <code>_runtime_for</code> is decorated <code>@st.cache_resource</code> and <code>AgentRuntime</code> builds the

@@ -744,3 +744,65 @@ def test_teardown_drops_published_results(session):
     assert session.results()
     session.teardown()
     assert session.results() == []
+
+
+
+# ---------------------------------------------------------------------------
+# Public demo mode
+# ---------------------------------------------------------------------------
+# Demo mode exists because Community Cloud has no sign-in. It does not establish
+# identity; it reduces what an anonymous visitor can reach. Both controls are
+# enforced in code rather than by the banner.
+def test_demo_mode_removes_all_filesystem_reach(monkeypatch, tmp_path):
+    """No scan roots means every path is refused, so only uploads work."""
+    from utils import config as config_module
+
+    root = tmp_path / "logs"
+    root.mkdir()
+    monkeypatch.setenv("PII_AGENT_SCAN_ROOTS", str(root))
+    monkeypatch.setattr(config_module, "DEMO_MODE", True)
+
+    settings = config_module.load_settings()
+    assert settings.scan_roots == ()
+
+
+def test_scan_roots_are_honoured_when_not_in_demo_mode(monkeypatch, tmp_path):
+    from utils import config as config_module
+
+    root = tmp_path / "logs"
+    root.mkdir()
+    monkeypatch.setenv("PII_AGENT_SCAN_ROOTS", str(root))
+    monkeypatch.setattr(config_module, "DEMO_MODE", False)
+
+    settings = config_module.load_settings()
+    assert settings.scan_roots == (root.resolve(),)
+
+
+def test_demo_mode_caps_upload_size(monkeypatch, session):
+    from core import file_source
+    from utils import config as config_module
+    from utils.paths import PathRefused
+
+    monkeypatch.setattr(config_module, "DEMO_MODE", True)
+    monkeypatch.setattr(config_module, "DEMO_MAX_UPLOAD_BYTES", 1024)
+
+    oversize = b"x" * 2048
+    with pytest.raises(PathRefused) as exc:
+        file_source.load_upload(oversize, "big.log", session)
+    assert "demo" in str(exc.value).lower()
+
+    # At the boundary it still loads.
+    ok = file_source.load_upload(b"y" * 1024, "small.log", session)
+    assert ok.bytes_total == 1024
+
+
+def test_substituted_ner_model_is_reported_not_hidden(monkeypatch):
+    """A smaller model is a disclosed downgrade, not a broken install."""
+    from utils import config as config_module
+
+    monkeypatch.setattr(config_module, "SPACY_MODEL_NAME", "en_core_web_sm")
+    problems = config_module.verify_engine_versions()
+
+    assert any("en_core_web_sm" in p for p in problems)
+    assert any("names" in p for p in problems)
+    assert not any("MISSING" in p for p in problems)

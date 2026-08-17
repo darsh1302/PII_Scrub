@@ -24,7 +24,7 @@ from models.enums import AgentStateEnum
 from session.context import get_session_context
 from ui.health import collect_health, overall_status, scrubbing_blockers
 from ui.presenters import format_state
-from utils.config import load_settings
+from utils.config import DEMO_MAX_UPLOAD_BYTES, DEMO_MODE, load_settings
 from utils.content_gate import sanitize_error
 from utils.paths import PathRefused
 from utils.startup import validate_startup
@@ -189,6 +189,19 @@ st.caption(
     "Ask me to scan a file or some text for sensitive data. I will tell you what "
     "is there before changing anything."
 )
+
+if DEMO_MODE:
+    # Stated plainly and above the uploader, because the failure mode is a
+    # visitor pasting a real production log into a public demo.
+    st.warning(
+        "**Public demo — do not upload real data.** This instance has no "
+        "sign-in, so anything you submit is processed on a shared host by an "
+        "app anyone can reach. Uploads are capped at "
+        f"{DEMO_MAX_UPLOAD_BYTES // 1024} KB, filesystem scanning is disabled, "
+        "and the NER model is the smaller one, so fewer names are detected than "
+        "in a local install. Use the sample file from the repository.",
+        icon="⚠️",
+    )
 
 if report.warnings:
     with st.expander(f"⚠️ {len(report.warnings)} startup warning(s)"):

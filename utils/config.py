@@ -150,7 +150,30 @@ PINNED_VERSIONS = {
     "en-core-web-lg": "3.8.0",
 }
 
-SPACY_MODEL_NAME = "en_core_web_lg"
+# The NER model is env-overridable so a memory-constrained deployment can trade
+# recall for footprint. `en_core_web_lg` is ~600 MB resident and is the default;
+# `en_core_web_sm` is ~12 MB and detects noticeably fewer names.
+#
+# This is a real accuracy tradeoff, not a tuning knob, so the model actually used
+# is recorded in every ProcessingResult and audit record. A result produced with
+# the small model must not be mistaken later for one produced with the large one.
+SPACY_MODEL_NAME = os.getenv("PII_AGENT_SPACY_MODEL", "en_core_web_lg").strip()
+
+# Reduced-capability public demo. Uploads only, no filesystem reach, smaller
+# inputs, and a visible banner. Never a substitute for authentication — it limits
+# what an anonymous visitor can reach, it does not establish who they are.
+DEMO_MODE = os.getenv("PII_AGENT_DEMO_MODE", "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
+# Demo caps. The public runner throttles above ~690 MB with 2 CPU cores, and
+# throughput is ~2.4 KB/s, so a large upload would be killed mid-scan and look
+# like a crash rather than a limit.
+DEMO_MAX_UPLOAD_BYTES = 65_536
+DEMO_MAX_TEXT_CHARS = 20_000
 
 
 class ConfigError(RuntimeError):
@@ -264,10 +287,17 @@ def _parse_scan_roots(raw: str | None) -> tuple[Path, ...]:
 def load_settings() -> Settings:
     """Load settings from the environment. Does not validate — see startup.py."""
     salt_raw = os.getenv("PII_AGENT_TOKEN_VAULT_SALT", "")
+
+    # Demo mode removes filesystem reach entirely rather than relying on the
+    # operator having configured narrow roots. An anonymous visitor on a shared
+    # host should not be able to name a path at all: with no roots, every path is
+    # refused by containment and only uploads work.
+    roots = () if DEMO_MODE else _parse_scan_roots(os.getenv("PII_AGENT_SCAN_ROOTS"))
+
     return Settings(
         openai_api_key=os.getenv("OPENAI_API_KEY", "").strip(),
         token_vault_salt=salt_raw.encode("utf-8"),
-        scan_roots=_parse_scan_roots(os.getenv("PII_AGENT_SCAN_ROOTS")),
+        scan_roots=roots,
         bind_address=os.getenv("PII_AGENT_BIND_ADDRESS", "127.0.0.1").strip(),
         allow_remote=_parse_bool(os.getenv("PII_AGENT_ALLOW_REMOTE"), False),
         audit_dir=Path(os.getenv("PII_AGENT_AUDIT_DIR", "audit")).expanduser(),
@@ -299,7 +329,20 @@ def verify_engine_versions() -> list[str]:
     """
     installed = detect_engine_versions()
     mismatches: list[str] = []
+
+    # A deliberately substituted NER model is a disclosed downgrade, not a broken
+    # install. Reporting it as MISSING would hide the real message — that name
+    # recall is lower than the reference environment — behind a plumbing error.
+    default_model = "en_core_web_lg"
+    substituted = SPACY_MODEL_NAME != default_model
+
     for package, expected in PINNED_VERSIONS.items():
+        if substituted and package == default_model.replace("_", "-"):
+            mismatches.append(
+                f"NER model {SPACY_MODEL_NAME} in use instead of pinned "
+                f"{default_model} — fewer personal names will be detected"
+            )
+            continue
         actual = installed.get(package, "MISSING")
         if actual != expected:
             mismatches.append(

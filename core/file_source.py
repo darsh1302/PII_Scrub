@@ -102,7 +102,12 @@ def load_upload(
     """
     from pathlib import Path
 
-    from utils.config import MAX_FILE_SIZE_MB, SUPPORTED_FILE_EXTENSIONS
+    from utils.config import (
+        DEMO_MAX_UPLOAD_BYTES,
+        DEMO_MODE,
+        MAX_FILE_SIZE_MB,
+        SUPPORTED_FILE_EXTENSIONS,
+    )
 
     extension = Path(filename).suffix.lower()
     if extension not in SUPPORTED_FILE_EXTENSIONS:
@@ -110,6 +115,16 @@ def load_upload(
         raise PathRefused(
             f"unsupported file type '{extension or filename}'. "
             f"Supported: {supported}"
+        )
+
+    # Enforced here rather than only in the UI: the banner is advice, this is the
+    # control. A shared host throttles on memory long before the normal limit, and
+    # being killed mid-scan looks like a crash rather than a stated boundary.
+    if DEMO_MODE and len(data) > DEMO_MAX_UPLOAD_BYTES:
+        raise PathRefused(
+            f"'{filename}' is {len(data) / 1024:.0f} KB. This public demo "
+            f"accepts up to {DEMO_MAX_UPLOAD_BYTES // 1024} KB — run it locally "
+            f"for larger files."
         )
 
     limit = MAX_FILE_SIZE_MB * 1024 * 1024

@@ -1,0 +1,16 @@
+# Streamlit server configuration.
+#
+# maxUploadSize is a second, independent ceiling on top of the application's own
+# demo cap. Streamlit's default is 200 MB, which on a shared host is enough to
+# exhaust memory before the app ever sees the bytes.
+[server]
+maxUploadSize = 1
+enableXsrfProtection = true
+enableCORS = false
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "dark"
+primaryColor = "#4db6ac"

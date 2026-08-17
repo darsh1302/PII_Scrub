@@ -177,6 +177,41 @@ venv\Scripts\python tools_dev\make_big_sample.py 500000 scan_workspace\bigger.tx
 Uploading through the UI bypasses the scan-root allowlist, since you supplied the
 bytes directly. Scanning by path requires the file to be inside a configured root.
 
+## Public demo deployment (Streamlit Community Cloud)
+
+Community Cloud apps are publicly reachable and this application has no sign-in.
+Demo mode reduces what an anonymous visitor can reach; it does not establish who
+they are. Do not point it at real data.
+
+Set these in **App settings → Secrets**:
+
+```toml
+OPENAI_API_KEY = "sk-..."
+PII_AGENT_TOKEN_VAULT_SALT = "<64 hex characters>"
+PII_AGENT_DEMO_MODE = "true"
+PII_AGENT_ALLOW_REMOTE = "true"
+PII_AGENT_BIND_ADDRESS = "0.0.0.0"
+PII_AGENT_SPACY_MODEL = "en_core_web_sm"
+PII_AGENT_AUDIT_DIR = "audit"
+```
+
+What demo mode changes, all enforced in code rather than by the banner:
+
+| Control | Effect |
+|---|---|
+| Scan roots forced empty | Every filesystem path is refused; uploads only |
+| Upload cap 64 KB | The host throttles above ~690 MB RAM with 2 CPU cores |
+| `maxUploadSize = 1` in `.streamlit/config.toml` | Independent server-side ceiling |
+| Banner above the uploader | States plainly that there is no sign-in |
+
+`PII_AGENT_SPACY_MODEL=en_core_web_sm` swaps the 600 MB NER model for a 12 MB one.
+This is a real accuracy loss — fewer personal names are detected — so the model
+actually used is recorded in every result and audit record, and the health panel
+reports the substitution rather than hiding it.
+
+Your API key is spent by anyone who uses the app. Set a spend limit on the OpenAI
+account before sharing the URL.
+
 ## Development notes
 
 Restart Streamlit after editing `agent/prompts.py` or `agent/graph.py`.
