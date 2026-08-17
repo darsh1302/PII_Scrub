@@ -1,0 +1,82 @@
+{
+  "action_counts": {
+    "ALLOW": 2,
+    "REDACT": 3
+  },
+  "coverage_percent": 100.0,
+  "engine_versions": {
+    "presidio_analyzer": "2.2.364",
+    "presidio_anonymizer": "2.2.364",
+    "profile_name": "DEFAULT_PII",
+    "profile_version": "",
+    "spacy": "3.8.15",
+    "spacy_model": "en_core_web_lg@3.8.0"
+  },
+  "entities": [
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 20,
+      "start": 0,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 95,
+      "start": 84,
+      "type": "US_SSN"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 132,
+      "start": 119,
+      "type": "US_SSN"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.85,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 316,
+      "start": 296,
+      "type": "AWS_ACCESS_KEY"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 642,
+      "start": 622,
+      "type": "DATE_TIME"
+    }
+  ],
+  "entity_breakdown": {
+    "AWS_ACCESS_KEY": 1,
+    "DATE_TIME": 2,
+    "US_SSN": 2
+  },
+  "entity_count": 5,
+  "fixture": "sample_adversarial.txt",
+  "profile": "DEFAULT_PII",
+  "refusal": null,
+  "severity_breakdown": {
+    "HIGH": 1,
+    "LOW": 2,
+    "MEDIUM": 2
+  },
+  "status": "OK"
+}

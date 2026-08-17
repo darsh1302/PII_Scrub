@@ -1,0 +1,92 @@
+{
+  "action_counts": {
+    "REDACT": 6
+  },
+  "coverage_percent": 100.0,
+  "engine_versions": {
+    "presidio_analyzer": "2.2.364",
+    "presidio_anonymizer": "2.2.364",
+    "profile_name": "BASE_SECURITY",
+    "profile_version": "",
+    "spacy": "3.8.15",
+    "spacy_model": "en_core_web_lg@3.8.0"
+  },
+  "entities": [
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 551,
+      "start": 530,
+      "type": "AUTHORIZATION_HEADER"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 551,
+      "start": 545,
+      "type": "ACCESS_TOKEN"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 660,
+      "start": 552,
+      "type": "JWT"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.9,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 828,
+      "start": 782,
+      "type": "CONNECTION_STRING"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.75,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 811,
+      "start": 793,
+      "type": "PASSWORD"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 1061,
+      "start": 1041,
+      "type": "AWS_ACCESS_KEY"
+    }
+  ],
+  "entity_breakdown": {
+    "ACCESS_TOKEN": 1,
+    "AUTHORIZATION_HEADER": 1,
+    "AWS_ACCESS_KEY": 1,
+    "CONNECTION_STRING": 1,
+    "JWT": 1,
+    "PASSWORD": 1
+  },
+  "entity_count": 6,
+  "fixture": "sample_log.txt",
+  "profile": "BASE_SECURITY",
+  "refusal": null,
+  "severity_breakdown": {
+    "HIGH": 6
+  },
+  "status": "OK"
+}

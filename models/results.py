@@ -32,14 +32,27 @@ class EngineVersions:
     def detect(
         cls, profile_name: str = "", profile_version: str = ""
     ) -> "EngineVersions":
-        from utils.config import detect_engine_versions
+        import importlib.metadata as md
+
+        from utils.config import SPACY_MODEL_NAME, detect_engine_versions
 
         found = detect_engine_versions()
+
+        # Record the model actually loaded, not the default. Hardcoding
+        # en-core-web-lg meant a deployment configured for the small model would
+        # produce audit records naming a model it never ran — the opposite of the
+        # reproducibility this field exists to provide. Name is included because
+        # the version alone (both are 3.8.0) does not distinguish them.
+        try:
+            model_version = md.version(SPACY_MODEL_NAME.replace("_", "-"))
+        except md.PackageNotFoundError:  # pragma: no cover - broken install
+            model_version = "UNKNOWN"
+
         return cls(
             presidio_analyzer=found.get("presidio-analyzer", "UNKNOWN"),
             presidio_anonymizer=found.get("presidio-anonymizer", "UNKNOWN"),
             spacy=found.get("spacy", "UNKNOWN"),
-            spacy_model=found.get("en-core-web-lg", "UNKNOWN"),
+            spacy_model=f"{SPACY_MODEL_NAME}@{model_version}",
             profile_name=profile_name,
             profile_version=profile_version,
         )

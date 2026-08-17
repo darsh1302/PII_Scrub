@@ -1,0 +1,312 @@
+{
+  "action_counts": {
+    "ALLOW": 18,
+    "MASK": 2,
+    "REDACT": 2,
+    "REPLACE": 5
+  },
+  "coverage_percent": 100.0,
+  "engine_versions": {
+    "presidio_analyzer": "2.2.364",
+    "presidio_anonymizer": "2.2.364",
+    "profile_name": "DEFAULT_PII",
+    "profile_version": "",
+    "spacy": "3.8.15",
+    "spacy_model": "en_core_web_lg@3.8.0"
+  },
+  "entities": [
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 20,
+      "start": 0,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 99,
+      "start": 79,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 174,
+      "start": 152,
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 196,
+      "start": 185,
+      "type": "US_SSN"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 219,
+      "start": 199,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 351,
+      "start": 331,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 415,
+      "start": 393,
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 465,
+      "start": 445,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 516,
+      "start": 506,
+      "type": "PERSON"
+    },
+    {
+      "action": "MASK",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 554,
+      "start": 538,
+      "type": "CREDIT_CARD"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 577,
+      "start": 557,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 653,
+      "start": 643,
+      "type": "PERSON"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 694,
+      "start": 674,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 774,
+      "start": 770,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 798,
+      "start": 778,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 913,
+      "start": 893,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1070,
+      "start": 1050,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 1110,
+      "start": 1097,
+      "type": "PERSON"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1177,
+      "start": 1157,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 1265,
+      "start": 1212,
+      "type": "API_KEY"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1298,
+      "start": 1278,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1394,
+      "start": 1374,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "MASK",
+      "confidence": 0.75,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1483,
+      "start": 1468,
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1507,
+      "start": 1487,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1567,
+      "start": 1559,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.95,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1589,
+      "start": 1579,
+      "type": "IP_ADDRESS"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1611,
+      "start": 1591,
+      "type": "DATE_TIME"
+    }
+  ],
+  "entity_breakdown": {
+    "API_KEY": 1,
+    "CREDIT_CARD": 1,
+    "DATE_TIME": 17,
+    "EMAIL_ADDRESS": 2,
+    "IP_ADDRESS": 1,
+    "PERSON": 3,
+    "PHONE_NUMBER": 1,
+    "US_SSN": 1
+  },
+  "entity_count": 27,
+  "fixture": "golden_ai_trace.log",
+  "profile": "DEFAULT_PII",
+  "refusal": null,
+  "severity_breakdown": {
+    "HIGH": 1,
+    "LOW": 18,
+    "MEDIUM": 8
+  },
+  "status": "OK"
+}

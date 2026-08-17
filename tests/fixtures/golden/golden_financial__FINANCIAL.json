@@ -1,0 +1,502 @@
+{
+  "action_counts": {
+    "ALLOW": 21,
+    "MASK": 4,
+    "REDACT": 12,
+    "REPLACE": 1,
+    "TOKENIZE": 7
+  },
+  "coverage_percent": 100.0,
+  "engine_versions": {
+    "presidio_analyzer": "2.2.364",
+    "presidio_anonymizer": "2.2.364",
+    "profile_name": "FINANCIAL",
+    "profile_version": "",
+    "spacy": "3.8.15",
+    "spacy_model": "en_core_web_lg@3.8.0"
+  },
+  "entities": [
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 20,
+      "start": 0,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 98,
+      "start": 78,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "MASK",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 142,
+      "start": 118,
+      "type": "ROUTING_NUMBER"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 158,
+      "start": 151,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "MASK",
+      "confidence": 0.75,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 169,
+      "start": 159,
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 191,
+      "start": 171,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "MASK",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 221,
+      "start": 211,
+      "type": "SWIFT_CODE"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 233,
+      "start": 222,
+      "type": "PERSON"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.95,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 253,
+      "start": 234,
+      "type": "WIRE_INSTRUCTIONS"
+    },
+    {
+      "action": "TOKENIZE",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 276,
+      "start": 254,
+      "type": "IBAN_CODE"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 298,
+      "start": 278,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "TOKENIZE",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 339,
+      "start": 323,
+      "type": "CREDIT_CARD"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 362,
+      "start": 355,
+      "type": "CVV"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 384,
+      "start": 364,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "TOKENIZE",
+      "confidence": 0.95,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 429,
+      "start": 403,
+      "type": "FINANCIAL_ACCOUNT"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 471,
+      "start": 451,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "TOKENIZE",
+      "confidence": 0.95,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 519,
+      "start": 490,
+      "type": "FINANCIAL_ACCOUNT"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 557,
+      "start": 537,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 589,
+      "start": 573,
+      "type": "CREDIT_SCORE"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 629,
+      "start": 609,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 659,
+      "start": 645,
+      "type": "CREDIT_SCORE"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 688,
+      "start": 668,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 717,
+      "start": 703,
+      "type": "TAX_IDENTIFIER"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 768,
+      "start": 748,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "TOKENIZE",
+      "confidence": 0.95,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 817,
+      "start": 789,
+      "type": "FINANCIAL_ACCOUNT"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 842,
+      "start": 825,
+      "type": "PERSON"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 864,
+      "start": 844,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "TOKENIZE",
+      "confidence": 0.95,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 918,
+      "start": 886,
+      "type": "FINANCIAL_ACCOUNT"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 958,
+      "start": 938,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.95,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 1031,
+      "start": 978,
+      "type": "WIRE_INSTRUCTIONS"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1053,
+      "start": 1033,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 1081,
+      "start": 1073,
+      "type": "PIN"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1119,
+      "start": 1099,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "TOKENIZE",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1166,
+      "start": 1144,
+      "type": "IBAN_CODE"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 1184,
+      "start": 1174,
+      "type": "PERSON"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1206,
+      "start": 1186,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1256,
+      "start": 1226,
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "action": "MASK",
+      "confidence": 0.75,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1278,
+      "start": 1263,
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1300,
+      "start": 1280,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 1343,
+      "start": 1320,
+      "type": "DATABASE_CREDENTIAL"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.6,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1359,
+      "start": 1349,
+      "type": "IP_ADDRESS"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1381,
+      "start": 1361,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1416,
+      "start": 1405,
+      "type": "US_SSN"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1458,
+      "start": 1438,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.95,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1504,
+      "start": 1494,
+      "type": "DATE_TIME"
+    }
+  ],
+  "entity_breakdown": {
+    "CREDIT_CARD": 1,
+    "CREDIT_SCORE": 2,
+    "CVV": 1,
+    "DATABASE_CREDENTIAL": 1,
+    "DATE_TIME": 20,
+    "EMAIL_ADDRESS": 1,
+    "FINANCIAL_ACCOUNT": 4,
+    "IBAN_CODE": 2,
+    "IP_ADDRESS": 1,
+    "PERSON": 3,
+    "PHONE_NUMBER": 2,
+    "PIN": 1,
+    "ROUTING_NUMBER": 1,
+    "SWIFT_CODE": 1,
+    "TAX_IDENTIFIER": 1,
+    "US_SSN": 1,
+    "WIRE_INSTRUCTIONS": 2
+  },
+  "entity_count": 45,
+  "fixture": "golden_financial.log",
+  "profile": "FINANCIAL",
+  "refusal": null,
+  "severity_breakdown": {
+    "HIGH": 3,
+    "LOW": 23,
+    "MEDIUM": 19
+  },
+  "status": "OK"
+}

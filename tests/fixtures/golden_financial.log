@@ -1,0 +1,18 @@
+2026-03-04T08:15:22Z INFO  svc=payments req=r-40118 event=transfer_initiated
+2026-03-04T08:15:22Z INFO  svc=payments routing_number=021000021 account=US_BANK 8847213390
+2026-03-04T08:15:23Z INFO  svc=payments swift_code=DEUTDEFF500 beneficiary_account=DE89370400440532013000
+2026-03-04T08:15:23Z DEBUG svc=payments card=4532015112830366 exp_date=07/28 cvv=418
+2026-03-04T08:15:24Z INFO  svc=lending loan_account=LN88213004977 principal=250000.00
+2026-03-04T08:15:24Z INFO  svc=lending mortgage_number=MG40021188345 term_months=360
+2026-03-04T08:15:25Z INFO  svc=risk credit_score=742 decision=approved
+2026-03-04T08:15:25Z INFO  svc=risk fico_score=688 tier=B
+2026-03-04T08:15:26Z INFO  svc=tax ein=12-3456789 entity=Northwind Trading LLC
+2026-03-04T08:15:26Z INFO  svc=brokerage brokerage_account=BK99201847 holder=Priya Raghunathan
+2026-03-04T08:15:27Z INFO  svc=retirement retirement_account=IRA5540912233 contribution=7000
+2026-03-04T08:15:27Z WARN  svc=payments wire_instructions=BENE ACCT 4471902238 SWIFT CHASUS33
+2026-03-04T08:15:28Z INFO  svc=payments pin=4821 terminal=T-4408
+2026-03-04T08:15:28Z INFO  svc=accounts iban=GB29NWBK60161331926819 holder=Dana Reyes
+2026-03-04T08:15:29Z INFO  svc=accounts contact=dana.reyes@example.com phone=+1-415-555-0182
+2026-03-04T08:15:29Z ERROR svc=payments db_password=Tr0ub4dor&3 host=10.20.4.11
+2026-03-04T08:15:30Z INFO  svc=payments ssn=482-71-9053 verification=passed
+2026-03-04T08:15:30Z INFO  svc=payments settlement_date=2026-03-06 amount=1284.55

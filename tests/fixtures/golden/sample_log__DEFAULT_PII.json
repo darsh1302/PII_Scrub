@@ -1,0 +1,958 @@
+{
+  "action_counts": {
+    "ALLOW": 77,
+    "MASK": 1,
+    "REDACT": 7,
+    "REPLACE": 6
+  },
+  "coverage_percent": 100.0,
+  "engine_versions": {
+    "presidio_analyzer": "2.2.364",
+    "presidio_anonymizer": "2.2.364",
+    "profile_name": "DEFAULT_PII",
+    "profile_version": "",
+    "spacy": "3.8.15",
+    "spacy_model": "en_core_web_lg@3.8.0"
+  },
+  "entities": [
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 20,
+      "start": 0,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 96,
+      "start": 76,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 164,
+      "start": 144,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 217,
+      "start": 193,
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.6,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 235,
+      "start": 223,
+      "type": "IP_ADDRESS"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 257,
+      "start": 237,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 327,
+      "start": 307,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 369,
+      "start": 353,
+      "type": "PERSON"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 385,
+      "start": 374,
+      "type": "US_SSN"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 421,
+      "start": 401,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "MASK",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 464,
+      "start": 448,
+      "type": "CREDIT_CARD"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 509,
+      "start": 489,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 551,
+      "start": 530,
+      "type": "AUTHORIZATION_HEADER"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 551,
+      "start": 545,
+      "type": "ACCESS_TOKEN"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 660,
+      "start": 552,
+      "type": "JWT"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 682,
+      "start": 662,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 744,
+      "start": 729,
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 766,
+      "start": 746,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.9,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 828,
+      "start": 782,
+      "type": "CONNECTION_STRING"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.75,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 811,
+      "start": 793,
+      "type": "PASSWORD"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 858,
+      "start": 838,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 927,
+      "start": 919,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 949,
+      "start": 929,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1019,
+      "start": 999,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 1061,
+      "start": 1041,
+      "type": "AWS_ACCESS_KEY"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1092,
+      "start": 1072,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1168,
+      "start": 1148,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1244,
+      "start": 1224,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1320,
+      "start": 1300,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1396,
+      "start": 1376,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1472,
+      "start": 1452,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1548,
+      "start": 1528,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1624,
+      "start": 1604,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1701,
+      "start": 1681,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1778,
+      "start": 1758,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1855,
+      "start": 1835,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 1933,
+      "start": 1913,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2011,
+      "start": 1981,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2089,
+      "start": 2069,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2167,
+      "start": 2147,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2245,
+      "start": 2225,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2323,
+      "start": 2303,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2401,
+      "start": 2381,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2479,
+      "start": 2459,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2557,
+      "start": 2537,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2635,
+      "start": 2615,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 2691,
+      "start": 2687,
+      "type": "LOCATION"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2713,
+      "start": 2693,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2791,
+      "start": 2771,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2849,
+      "start": 2839,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2869,
+      "start": 2849,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 2947,
+      "start": 2927,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3025,
+      "start": 3005,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3103,
+      "start": 3083,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3181,
+      "start": 3161,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3259,
+      "start": 3239,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3337,
+      "start": 3317,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3415,
+      "start": 3395,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 3471,
+      "start": 3467,
+      "type": "LOCATION"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3493,
+      "start": 3473,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3571,
+      "start": 3551,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3649,
+      "start": 3629,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3727,
+      "start": 3707,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3805,
+      "start": 3785,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3883,
+      "start": 3863,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 3961,
+      "start": 3941,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4039,
+      "start": 4019,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4117,
+      "start": 4097,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4173,
+      "start": 4165,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4195,
+      "start": 4175,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4272,
+      "start": 4252,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4349,
+      "start": 4329,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4426,
+      "start": 4406,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4503,
+      "start": 4483,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4580,
+      "start": 4560,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4657,
+      "start": 4637,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4734,
+      "start": 4714,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4812,
+      "start": 4792,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4890,
+      "start": 4870,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 4968,
+      "start": 4948,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 5019,
+      "start": 5006,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 5046,
+      "start": 5026,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 5124,
+      "start": 5104,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 5202,
+      "start": 5182,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 5280,
+      "start": 5260,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 5358,
+      "start": 5338,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 5436,
+      "start": 5416,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 5514,
+      "start": 5494,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.8,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 5592,
+      "start": 5572,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 5670,
+      "start": 5650,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 5726,
+      "start": 5722,
+      "type": "LOCATION"
+    }
+  ],
+  "entity_breakdown": {
+    "ACCESS_TOKEN": 1,
+    "AUTHORIZATION_HEADER": 1,
+    "AWS_ACCESS_KEY": 1,
+    "CONNECTION_STRING": 1,
+    "CREDIT_CARD": 1,
+    "DATE_TIME": 76,
+    "EMAIL_ADDRESS": 2,
+    "IP_ADDRESS": 1,
+    "JWT": 1,
+    "LOCATION": 3,
+    "PASSWORD": 1,
+    "PERSON": 1,
+    "US_SSN": 1
+  },
+  "entity_count": 91,
+  "fixture": "sample_log.txt",
+  "profile": "DEFAULT_PII",
+  "refusal": null,
+  "severity_breakdown": {
+    "HIGH": 6,
+    "LOW": 80,
+    "MEDIUM": 5
+  },
+  "status": "OK"
+}

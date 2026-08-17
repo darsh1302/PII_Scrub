@@ -440,4 +440,6 @@ def test_audit_records_engine_and_profile_versions(session):
 
     latest = list(session.audit_sink.read_all())[-1]
     assert latest["profile_version"] == "1.0.0"
-    assert latest["engine_versions"]["spacy_model"] == "3.8.0"
+    # Model-qualified: lg and sm share version 3.8.0, so the version alone would
+    # not tell you which model produced the result.
+    assert latest["engine_versions"]["spacy_model"] == "en_core_web_lg@3.8.0"

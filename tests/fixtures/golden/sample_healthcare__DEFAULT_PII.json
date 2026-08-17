@@ -1,0 +1,105 @@
+{
+  "action_counts": {
+    "ALLOW": 3,
+    "REPLACE": 4
+  },
+  "coverage_percent": 100.0,
+  "engine_versions": {
+    "presidio_analyzer": "2.2.364",
+    "presidio_anonymizer": "2.2.364",
+    "profile_name": "DEFAULT_PII",
+    "profile_version": "",
+    "spacy": "3.8.15",
+    "spacy_model": "en_core_web_lg@3.8.0"
+  },
+  "entities": [
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 177,
+      "start": 161,
+      "type": "PERSON"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 200,
+      "start": 190,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 391,
+      "start": 377,
+      "type": "PERSON"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 414,
+      "start": 404,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 574,
+      "start": 567,
+      "type": "LOCATION"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 605,
+      "start": 588,
+      "type": "PERSON"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 628,
+      "start": 618,
+      "type": "DATE_TIME"
+    }
+  ],
+  "entity_breakdown": {
+    "DATE_TIME": 3,
+    "LOCATION": 1,
+    "PERSON": 3
+  },
+  "entity_count": 7,
+  "fixture": "sample_healthcare.csv",
+  "profile": "DEFAULT_PII",
+  "refusal": null,
+  "severity_breakdown": {
+    "LOW": 4,
+    "MEDIUM": 3
+  },
+  "status": "OK"
+}

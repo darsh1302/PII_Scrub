@@ -1,0 +1,153 @@
+{
+  "action_counts": {
+    "ALLOW": 2,
+    "MASK": 2,
+    "REDACT": 4,
+    "REPLACE": 3
+  },
+  "coverage_percent": 100.0,
+  "engine_versions": {
+    "presidio_analyzer": "2.2.364",
+    "presidio_anonymizer": "2.2.364",
+    "profile_name": "DEFAULT_PII",
+    "profile_version": "",
+    "spacy": "3.8.15",
+    "spacy_model": "en_core_web_lg@3.8.0"
+  },
+  "entities": [
+    {
+      "action": "ALLOW",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 96,
+      "start": 76,
+      "type": "DATE_TIME"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio",
+        "spacy"
+      ],
+      "end": 151,
+      "start": 135,
+      "type": "PERSON"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 210,
+      "start": 182,
+      "type": "EMAIL_ADDRESS"
+    },
+    {
+      "action": "MASK",
+      "confidence": 0.75,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 258,
+      "start": 241,
+      "type": "PHONE_NUMBER"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 294,
+      "start": 283,
+      "type": "US_SSN"
+    },
+    {
+      "action": "MASK",
+      "confidence": 1.0,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 382,
+      "start": 366,
+      "type": "CREDIT_CARD"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 1.0,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 515,
+      "start": 474,
+      "type": "API_KEY"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.9,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 617,
+      "start": 571,
+      "type": "CONNECTION_STRING"
+    },
+    {
+      "action": "REDACT",
+      "confidence": 0.75,
+      "detected_by": [
+        "custom_security"
+      ],
+      "end": 600,
+      "start": 582,
+      "type": "PASSWORD"
+    },
+    {
+      "action": "REPLACE",
+      "confidence": 0.85,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 647,
+      "start": 639,
+      "type": "URL"
+    },
+    {
+      "action": "ALLOW",
+      "confidence": 0.95,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 695,
+      "start": 683,
+      "type": "IP_ADDRESS"
+    }
+  ],
+  "entity_breakdown": {
+    "API_KEY": 1,
+    "CONNECTION_STRING": 1,
+    "CREDIT_CARD": 1,
+    "DATE_TIME": 1,
+    "EMAIL_ADDRESS": 1,
+    "IP_ADDRESS": 1,
+    "PASSWORD": 1,
+    "PERSON": 1,
+    "PHONE_NUMBER": 1,
+    "URL": 1,
+    "US_SSN": 1
+  },
+  "entity_count": 11,
+  "fixture": "sample_pii.json",
+  "profile": "DEFAULT_PII",
+  "refusal": null,
+  "severity_breakdown": {
+    "HIGH": 3,
+    "LOW": 3,
+    "MEDIUM": 5
+  },
+  "status": "OK"
+}

@@ -246,7 +246,10 @@ def test_engine_versions_are_recorded_for_reproducibility(session):
     versions = result.engine_versions
     assert versions.presidio_analyzer == "2.2.364"
     assert versions.spacy == "3.8.15"
-    assert versions.spacy_model == "3.8.0"
+    # Names the model, not just its version: en_core_web_lg and en_core_web_sm are
+    # both 3.8.0, and a result produced with the smaller model must be
+    # distinguishable in the audit trail.
+    assert versions.spacy_model == "en_core_web_lg@3.8.0"
     assert versions.profile_name == "DEFAULT_PII"
     assert versions.profile_version == "1.0.0"
     assert versions.fingerprint()
