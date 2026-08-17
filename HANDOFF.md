@@ -192,6 +192,17 @@ single line in Presidio's time (10.3s of 28.4s), and with goldens in place its
 removal is now *measurable* — regenerate, diff, and see exactly which entities are
 lost. Do not disable it without that diff.
 
+**Do not increase the chunk size.** Detection cost is superlinear in chunk length.
+Measured on 254 KB in one process, 2 runs each: 10 KB 33.4s, 20 KB 32.2s, 40 KB
+(default) 34.9s, 80 KB 32.1s, 160 KB 39.7s, single 300 KB chunk **67.3s** — twice
+the time for byte-identical output. Everything from 10 to 80 KB is inside the noise
+band, so the default is already in the flat part of the curve.
+
+This is also why `max_pattern_span` matters beyond correctness: the span becomes the
+chunker's overlap, and a span near the chunk size collapses the document into one
+chunk and lands on the expensive end of that curve. Incidentally, sizes below the
+default all produced 7 chunks, so the chunker appears to floor near 40960.
+
 **Measurement variance is high here.** The same unchanged scrub measured 110.7s,
 86.4s and 118.3s within one session. Single-run wall-clock is not trustworthy: use
 medians of repeated runs, and prefer A/B in one process over cross-session
