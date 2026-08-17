@@ -81,7 +81,11 @@ def check_spacy() -> ComponentHealth:
 
 
 def check_engine_versions() -> ComponentHealth:
-    from utils.config import verify_engine_versions
+    from utils.config import (
+        SPACY_MODEL_NAME,
+        engine_substitutions,
+        verify_engine_versions,
+    )
 
     mismatches = verify_engine_versions()
     if mismatches:
@@ -94,11 +98,27 @@ def check_engine_versions() -> ComponentHealth:
                 + "; ".join(mismatches)
             ),
         )
+
     found = detect_engine_versions()
+
+    # A substitution is reported as DEGRADED rather than OK. Detection still runs
+    # and results are reproducible, but recall is lower than the reference
+    # environment and the user should not have to infer that.
+    substitutions = engine_substitutions()
+    if substitutions:
+        return ComponentHealth(
+            name="Engine versions",
+            status=Health.DEGRADED,
+            detail="; ".join(substitutions),
+        )
+
     return ComponentHealth(
         name="Engine versions",
         status=Health.OK,
-        detail=f"Presidio {found.get('presidio-analyzer')}, spaCy {found.get('spacy')}",
+        detail=(
+            f"Presidio {found.get('presidio-analyzer')}, "
+            f"spaCy {found.get('spacy')} (model {SPACY_MODEL_NAME})"
+        ),
     )
 
 

@@ -796,13 +796,30 @@ def test_demo_mode_caps_upload_size(monkeypatch, session):
     assert ok.bytes_total == 1024
 
 
-def test_substituted_ner_model_is_reported_not_hidden(monkeypatch):
-    """A smaller model is a disclosed downgrade, not a broken install."""
+def test_substituted_ner_model_is_a_warning_not_a_startup_block(monkeypatch):
+    """A smaller model is a disclosed downgrade, not an unreproducible install.
+
+    Regression: routing the substitution through verify_engine_versions() made
+    startup refuse to launch, because anything that function returns is treated
+    as a hard block. The demo configuration became unusable.
+    """
     from utils import config as config_module
 
     monkeypatch.setattr(config_module, "SPACY_MODEL_NAME", "en_core_web_sm")
-    problems = config_module.verify_engine_versions()
 
-    assert any("en_core_web_sm" in p for p in problems)
-    assert any("names" in p for p in problems)
-    assert not any("MISSING" in p for p in problems)
+    # Not a version mismatch: nothing drifted, so startup must not be blocked.
+    assert config_module.verify_engine_versions() == []
+
+    # Reported separately, and it names the consequence.
+    notes = config_module.engine_substitutions()
+    assert any("en_core_web_sm" in n for n in notes)
+    assert any("names" in n for n in notes)
+
+
+def test_default_model_reports_no_substitution(monkeypatch):
+    from utils import config as config_module
+
+    monkeypatch.setattr(
+        config_module, "SPACY_MODEL_NAME", config_module.DEFAULT_SPACY_MODEL
+    )
+    assert config_module.engine_substitutions() == []

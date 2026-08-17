@@ -157,7 +157,8 @@ PINNED_VERSIONS = {
 # This is a real accuracy tradeoff, not a tuning knob, so the model actually used
 # is recorded in every ProcessingResult and audit record. A result produced with
 # the small model must not be mistaken later for one produced with the large one.
-SPACY_MODEL_NAME = os.getenv("PII_AGENT_SPACY_MODEL", "en_core_web_lg").strip()
+DEFAULT_SPACY_MODEL = "en_core_web_lg"
+SPACY_MODEL_NAME = os.getenv("PII_AGENT_SPACY_MODEL", DEFAULT_SPACY_MODEL).strip()
 
 # Reduced-capability public demo. Uploads only, no filesystem reach, smaller
 # inputs, and a visible banner. Never a substitute for authentication — it limits
@@ -330,18 +331,15 @@ def verify_engine_versions() -> list[str]:
     installed = detect_engine_versions()
     mismatches: list[str] = []
 
-    # A deliberately substituted NER model is a disclosed downgrade, not a broken
-    # install. Reporting it as MISSING would hide the real message — that name
-    # recall is lower than the reference environment — behind a plumbing error.
-    default_model = "en_core_web_lg"
-    substituted = SPACY_MODEL_NAME != default_model
+    # An intentionally substituted NER model is not a version mismatch. It is
+    # reported separately by engine_substitutions() and must not appear here:
+    # startup treats anything this function returns as a hard block, so folding a
+    # deliberate choice in would refuse to start over a configuration the
+    # operator made on purpose.
+    skip = DEFAULT_SPACY_MODEL.replace("_", "-") if _model_substituted() else None
 
     for package, expected in PINNED_VERSIONS.items():
-        if substituted and package == default_model.replace("_", "-"):
-            mismatches.append(
-                f"NER model {SPACY_MODEL_NAME} in use instead of pinned "
-                f"{default_model} — fewer personal names will be detected"
-            )
+        if package == skip:
             continue
         actual = installed.get(package, "MISSING")
         if actual != expected:
@@ -349,3 +347,33 @@ def verify_engine_versions() -> list[str]:
                 f"{package}: pinned {expected}, installed {actual}"
             )
     return mismatches
+
+
+def _model_substituted() -> bool:
+    return SPACY_MODEL_NAME != DEFAULT_SPACY_MODEL
+
+
+def engine_substitutions() -> list[str]:
+    """Deliberate, disclosed capability reductions.
+
+    Separate from version mismatches because the severity differs. A mismatch
+    means results would not be reproducible and processing must not proceed. A
+    substitution means the operator chose lower recall, which is a warning the
+    user should see but not a reason to refuse to start.
+    """
+    if not _model_substituted():
+        return []
+
+    installed = detect_engine_versions()
+    version = installed.get(SPACY_MODEL_NAME.replace("_", "-"), "unknown")
+    if version == "MISSING":
+        return [
+            f"NER model {SPACY_MODEL_NAME} is configured but not installed. "
+            f"Run: pip install -r requirements.txt"
+        ]
+
+    return [
+        f"NER model {SPACY_MODEL_NAME} in use instead of the default "
+        f"{DEFAULT_SPACY_MODEL} — fewer personal names will be detected. "
+        f"Recorded in every result and audit record."
+    ]

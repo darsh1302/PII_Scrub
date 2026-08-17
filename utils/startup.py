@@ -23,6 +23,7 @@ from session.context import sweep_orphan_temp_dirs
 from utils.config import (
     ConfigError,
     Settings,
+    engine_substitutions,
     load_settings,
     verify_engine_versions,
 )
@@ -141,6 +142,11 @@ def validate_startup(
             + "\n         ".join(mismatches)
             + "\n         Run: pip install -r requirements.txt"
         )
+
+    # A deliberately reduced NER model is a warning, not a block. The operator
+    # chose it; refusing to start would make a supported configuration unusable.
+    for substitution in engine_substitutions():
+        report.add_warning(substitution)
 
     # --- Audit sink writability (Requirement 41.3) -------------------------
     try:
