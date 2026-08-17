@@ -6,13 +6,25 @@
 # Financial investigation work — reconciliation, fraud analysis, dispute
 # handling — depends on being able to tell whether two records concern the same
 # account. Redacting every account number produces a file that is safe and
-# useless. A stable token keeps the join and removes the value.
+# useless. A token keeps the join and removes the value.
 #
 # Where correlation buys nothing, the action is stricter. A credit score is not
 # an identifier and nobody joins on it, so it is simply removed.
 #
-# TOKENIZE is reversible out-of-band by an operator only. The agent has no
-# detokenize capability and the registry refuses to build one.
+# IMPORTANT — the current TOKENIZE implementation is session-scoped. Surrogates
+# come from a CSPRNG and live in an in-memory dict that is cleared on session
+# teardown. So:
+#
+#   * the join works within one scrub session, and across artifacts produced in
+#     that same session;
+#   * it does NOT work across sessions or restarts — the same account gets a
+#     different surrogate next time;
+#   * the values are NOT recoverable afterwards, by an operator or anyone else.
+#
+# Treat TOKENIZE here as irreversible with a session-local join key. Genuine
+# cross-session tokenization needs a durable encrypted vault, which does not
+# exist yet. If you need a join that survives beyond one session, do not rely on
+# this — see docs and HANDOFF.md.
 
 name: FINANCIAL
 version: "1.0.0"

@@ -176,6 +176,18 @@ DEMO_MODE = os.getenv("PII_AGENT_DEMO_MODE", "").strip().lower() in {
 DEMO_MAX_UPLOAD_BYTES = 65_536
 DEMO_MAX_TEXT_CHARS = 20_000
 
+# How long an untouched session keeps its content before being swept.
+#
+# This is a retention control, not memory hygiene. Streamlit does not reliably
+# signal a browser close, so without a sweep every session that ever existed
+# keeps its ContentStore — and that store holds the original file content, which
+# is the sensitive data. In a long-running process that is indefinite retention
+# of material the tool exists to protect.
+#
+# One hour balances a user stepping away mid-task against holding a scanned
+# payroll file in memory overnight.
+SESSION_IDLE_TIMEOUT_SECONDS = 3600
+
 
 class ConfigError(RuntimeError):
     """Raised when configuration is missing or unsafe. Never contains secrets."""

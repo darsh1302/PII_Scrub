@@ -119,12 +119,29 @@ Guessing either way is wrong, so the agent asks.
 | `REPLACE` | `[US_SSN]` | no | no |
 | `MASK` | `****` | no | no |
 | `HASH` | `[US_SSN:a3f9c2e1b7d40856]` | yes | no, but guessable on small domains |
-| `TOKENIZE` | stable vault token | yes | out-of-band only |
+| `TOKENIZE` | session-scoped surrogate | within one session only | **no** |
 | `REDACT` | `[REDACTED:US_SSN]` | no | no |
 | `BLOCK` | no artifact at all | n/a | n/a |
 
 `MASK` uses a fixed 8 characters for HIGH-severity entities rather than matching
 length — a nine-character masked SSN still discloses format and narrows the value.
+
+**`TOKENIZE` is narrower than the name suggests.** Surrogates are random values
+held in memory for the life of the session. Within one session the same input
+always gets the same surrogate, so an artifact is internally consistent and two
+artifacts produced in that session can be joined. Across sessions or after a
+restart, the same input gets a different surrogate — and once the session ends the
+mapping is gone, so the original values cannot be recovered by anyone, operator
+included.
+
+So treat it as *irreversible, with a session-local join key*. It is a reasonable
+choice for `PAYMENT_PCI`, where nothing requires a PAN be retrievable. It is not
+sufficient if you need to join exports produced on different days. Genuine
+cross-session tokenization needs a durable encrypted vault, which is not built —
+and making surrogates deterministic instead would reintroduce the brute-forcing
+weakness that gets `HASH` rejected for card numbers and SSNs.
+
+The UI states this at the download whenever an artifact contains tokenized values.
 
 `BLOCK` is not a synonym for `REDACT`. `REDACT` removes a span and still yields
 output; `BLOCK` suppresses the entire artifact and is handled before any

@@ -1,6 +1,25 @@
-"""Session-scoped reversible tokenization vault.
+"""Session-scoped tokenization vault.
 
 Guardrails G11, G15. Requirement 32, correctness Property 4.
+
+**Scope limitation — read this before choosing TOKENIZE in a profile.**
+
+Surrogates are CSPRNG values held in an in-memory dict on the owning
+SessionContext. Two consequences follow, and both contradict what "tokenization"
+usually implies:
+
+* **Correlation holds only within one session.** The same input scrubbed in a
+  later session gets an entirely different surrogate, so two artifacts cannot be
+  joined. If a profile chooses TOKENIZE over MASK to keep records correlatable,
+  that benefit ends at the session boundary.
+* **Reversal is not available at all.** ``teardown()`` clears the vault, and
+  nothing persists it. Once a session ends the mapping is gone, so a surrogate in
+  a downloaded artifact can never be resolved — by an operator or by anyone.
+
+Real reversible tokenization needs a durable encrypted vault, which is the
+persistence this project deliberately does not have. Until that exists, treat
+TOKENIZE as *irreversible with a session-local join key*, and do not promise
+users cross-session correlation or recovery.
 
 Two deliberate design constraints:
 
@@ -8,9 +27,13 @@ Two deliberate design constraints:
    resolve/reverse method that the reasoning loop can reach. Because the agent
    ingests attacker-writable content, an exposed detokenize tool would turn
    prompt injection into an exfiltration primitive (SEC-09): injected text tells
-   the agent to reverse tokens and print originals. Reversal lives in
-   ``scripts/detokenize.py``, an out-of-band operator entry point that takes an
-   explicit authorization argument and writes an audit record per access.
+   the agent to reverse tokens and print originals.
+
+   Note this is currently enforced by there being no reversal path anywhere,
+   in-agent or out. An earlier version of this docstring referred to a
+   ``scripts/detokenize.py`` operator entry point; it was never built. When one
+   is added it must live outside the agent's tool registry, take an explicit
+   authorization argument, and write an audit record per access.
 
 2. **HASH is not anonymization.** ``hash_value`` uses PBKDF2 with a
    per-deployment salt, but the entire US SSN space is ~10^9 values — brute
@@ -79,6 +102,10 @@ class TokenVault:
 
     def tokenize(self, value: str, entity_type: str) -> str:
         """Return a surrogate for ``value``, creating one if needed.
+
+        Stable within this session only — the mapping is in memory and is cleared
+        on teardown. See the module docstring: this is not cross-session
+        tokenization and the result is not reversible afterwards.
 
         Raises TokenizationRefused for prohibited types.
         """

@@ -192,6 +192,34 @@ single line in Presidio's time (10.3s of 28.4s), and with goldens in place its
 removal is now *measurable* — regenerate, diff, and see exactly which entities are
 lost. Do not disable it without that diff.
 
+**`TOKENIZE` is session-scoped, and the profiles used to claim otherwise.** Found in
+an implementation review. `_mint_surrogate` uses a CSPRNG and stores the mapping in
+an in-memory dict cleared on teardown, so:
+
+* the join holds within one session, never across sessions or restarts;
+* the values are not recoverable afterwards, by an operator or anyone — the
+  `scripts/detokenize.py` the module docstring referenced was never built.
+
+FINANCIAL and PAYMENT_PCI both justified choosing TOKENIZE over MASK on
+correlation grounds, which overstated it. Corrected in both profiles, the vault
+docstring, the docs, and at the download in the UI.
+
+Do **not** "fix" this by making surrogates deterministic (`HMAC(salt, type+value)`).
+It would give stable cross-session tokens and reintroduce precisely the
+brute-forcing weakness that guardrail G14 rejects `HASH` for on card numbers and
+SSNs. The real fix is a durable encrypted vault, which needs the persistence this
+project deliberately avoids. `test_session_retention.py` pins the current
+behaviour, including a test that fails if tokens ever become cross-session equal.
+
+**Idle sessions are swept.** `sweep_idle_sessions` runs on every Streamlit rerun,
+tearing down sessions untouched for `SESSION_IDLE_TIMEOUT_SECONDS` (3600). This is
+a retention control, not memory hygiene: Streamlit never signals a browser close,
+so without it every session that ever existed kept its `ContentStore` — the
+original file content — for the life of the process. `last_touched` uses
+`time.monotonic` and is refreshed on every `get_session_context`, so "idle" means
+inactive rather than merely old and a long scan cannot have its own content swept
+mid-run.
+
 **Do not increase the chunk size.** Detection cost is superlinear in chunk length.
 Measured on 254 KB in one process, 2 runs each: 10 KB 33.4s, 20 KB 32.2s, 40 KB
 (default) 34.9s, 80 KB 32.1s, 160 KB 39.7s, single 300 KB chunk **67.3s** — twice

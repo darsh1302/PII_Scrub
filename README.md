@@ -161,7 +161,9 @@ what the fail-closed gates depend on.
   validation. Those value spaces are exhaustible, so a salted digest is
   pseudonymization, not anonymization.
 - There is no detokenization tool, and the registry raises if one is ever added.
-  Reversal is out-of-band only.
+  There is no out-of-band reversal path either: `TOKENIZE` surrogates live in
+  memory for the session and are discarded with it, so tokens are a session-local
+  join key rather than recoverable references.
 - Nothing is written to disk. The cleaned copy lives in the session and leaves via
   download.
 - Prompt-injection patterns found in content are reported, never enforced. The

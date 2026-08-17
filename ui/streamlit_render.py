@@ -185,6 +185,17 @@ def _render_export(result: ProcessingResult, session: SessionContext) -> None:
         "download folder."
     )
 
+    # Shown at the download rather than buried in docs: this is the moment
+    # someone decides whether they can join this artifact against another one.
+    if result.decisions.action_counts().get("TOKENIZE"):
+        st.caption(
+            "⚠️ This artifact contains tokenized values. The token-to-value "
+            "mapping lives in this session only and is discarded when the session "
+            "ends — tokens are consistent within this artifact, but the same input "
+            "scrubbed later gets different tokens, and the original values cannot "
+            "be recovered afterwards."
+        )
+
 
 def _render_provenance(result: ProcessingResult, summary: dict) -> None:
     with st.expander("Provenance"):

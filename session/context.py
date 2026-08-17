@@ -42,6 +42,11 @@ class SessionContext:
         self.session_id = session_id
         self.settings = settings or load_settings()
 
+        # Last time this session was reached. Drives idle sweeping — see
+        # sweep_idle_sessions. Monotonic so a clock adjustment cannot make a live
+        # session look ancient and have its content dropped mid-scan.
+        self.last_touched = time.monotonic()
+
         self.content_store = ContentStore(session_id)
         self.token_vault = TokenVault(session_id, self.settings.token_vault_salt)
         self.allowlist = AllowlistStore(session_id)
@@ -139,6 +144,10 @@ def get_session_context(
         if ctx is None:
             ctx = SessionContext(session_id, settings)
             _contexts[session_id] = ctx
+        else:
+            # Touch on every access, so "idle" means no activity rather than
+            # merely old. A long scan keeps its own session alive.
+            ctx.last_touched = time.monotonic()
         return ctx
 
 
@@ -159,6 +168,44 @@ def reset_all_sessions() -> None:
     """Tear down every session. Test-support and shutdown hook."""
     for session_id in active_session_ids():
         drop_session_context(session_id)
+
+
+def sweep_idle_sessions(max_idle_seconds: float | None = None) -> tuple[str, ...]:
+    """Tear down sessions untouched for longer than the timeout.
+
+    A retention control rather than memory hygiene. Streamlit gives no reliable
+    browser-close signal, so without this every session that ever existed keeps
+    its ContentStore — which holds the original file content. In a long-running
+    process that is indefinite retention of exactly the data this tool exists to
+    remove.
+
+    Returns the ids swept, so a caller can log or surface the count.
+
+    Teardown happens outside the registry lock: it removes a temp directory and
+    clears several stores, and holding the lock across filesystem work would
+    block every other session's lookup.
+    """
+    from utils.config import SESSION_IDLE_TIMEOUT_SECONDS
+
+    limit = (
+        SESSION_IDLE_TIMEOUT_SECONDS
+        if max_idle_seconds is None
+        else max_idle_seconds
+    )
+    now = time.monotonic()
+
+    with _registry_lock:
+        stale = [
+            session_id
+            for session_id, ctx in _contexts.items()
+            if now - ctx.last_touched > limit
+        ]
+        contexts = [_contexts.pop(session_id) for session_id in stale]
+
+    for ctx in contexts:
+        ctx.teardown()
+
+    return tuple(stale)
 
 
 # ----------------------------------------------------------------------

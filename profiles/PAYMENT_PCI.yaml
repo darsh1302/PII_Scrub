@@ -6,8 +6,15 @@
 #
 #   Cardholder data (PAN, cardholder name, expiry, service code) may be stored
 #   if it is rendered unreadable. So the PAN is TOKENIZE: unreadable, but
-#   correlation survives, which is what makes a payment log useful for
-#   reconciliation and fraud work.
+#   correlation survives within the session, which is what makes a payment log
+#   useful for reconciliation and fraud work.
+#
+#   Note the scope limit: surrogates are CSPRNG values held in memory and cleared
+#   on session teardown, so the join does not survive across sessions and the PAN
+#   is not recoverable afterwards. That is acceptable for PCI — nothing requires
+#   the PAN be retrievable — but it means TOKENIZE here is closer to
+#   "irreversible with a session-local join key" than to vault tokenization. Do
+#   not promise cross-session correlation on the strength of it.
 #
 #   Sensitive authentication data (CVV/CVC, PIN, full track data) must never be
 #   retained after authorisation, in any form. Those are REDACT, and TRACK_DATA

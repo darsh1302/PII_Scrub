@@ -21,7 +21,7 @@ from agent.memory import SessionMemory, prepare_for_model
 from agent.state import initial_state
 from core.file_source import load_upload
 from models.enums import AgentStateEnum
-from session.context import get_session_context
+from session.context import get_session_context, sweep_idle_sessions
 from ui.health import collect_health, overall_status, scrubbing_blockers
 from ui.presenters import (
     DESTINATION_NOTES,
@@ -82,6 +82,12 @@ def _session_id() -> str:
 
 
 session = get_session_context(_session_id(), settings)
+
+# Swept on every rerun rather than once at startup. Streamlit never tells us a
+# browser closed, so an abandoned session would otherwise hold its scanned
+# content — the actual sensitive data — for the life of the process. The sweep is
+# a dict scan over active sessions, so running it per interaction is free.
+_swept = sweep_idle_sessions()
 
 if "memory" not in st.session_state:
     st.session_state.memory = SessionMemory()
