@@ -1,0 +1,72 @@
+2026-08-16T09:14:22Z INFO  service=auth-api version=2.4.1 startup complete
+2026-08-16T09:14:23Z INFO  request_id=a3f9c12e GET /health 200 4ms
+2026-08-16T09:15:01Z WARN  login failed for user alice.morgan@example.com from 203.0.113.42
+2026-08-16T09:15:02Z INFO  request_id=b7d2e88a POST /users 201 122ms
+2026-08-16T09:15:44Z ERROR unhandled: patient Jane Fairweather ssn=482-71-9053 lookup failed
+2026-08-16T09:16:10Z INFO  billing charge card=4532015112830366 exp=09/29 amount=42.50
+2026-08-16T09:16:11Z DEBUG upstream call Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U
+2026-08-16T09:16:30Z INFO  contact support at +1 (415) 555-0142 or ops@example.com
+2026-08-16T09:17:02Z WARN  db retry postgresql://svc_user:hunter2@db.internal:5432/records
+2026-08-16T09:17:15Z INFO  shipment to 1600 Amphitheatre Parkway, Mountain View, CA 94043
+2026-08-16T09:17:40Z INFO  request_id=c1e4f770 GET /reports 200 88ms
+2026-08-16T09:18:02Z ERROR aws credential AKIAIOSFODNN7EXAMPLE rejected
+2026-08-16T09:20:00Z INFO  request_id=pad0000 GET /assets/app.0.js 200 3ms
+2026-08-16T09:21:01Z INFO  request_id=pad0001 GET /assets/app.1.js 200 4ms
+2026-08-16T09:22:02Z INFO  request_id=pad0002 GET /assets/app.2.js 200 5ms
+2026-08-16T09:23:03Z INFO  request_id=pad0003 GET /assets/app.3.js 200 6ms
+2026-08-16T09:24:04Z INFO  request_id=pad0004 GET /assets/app.4.js 200 7ms
+2026-08-16T09:25:05Z INFO  request_id=pad0005 GET /assets/app.5.js 200 8ms
+2026-08-16T09:26:06Z INFO  request_id=pad0006 GET /assets/app.6.js 200 9ms
+2026-08-16T09:27:07Z INFO  request_id=pad0007 GET /assets/app.7.js 200 10ms
+2026-08-16T09:28:08Z INFO  request_id=pad0008 GET /assets/app.8.js 200 11ms
+2026-08-16T09:29:09Z INFO  request_id=pad0009 GET /assets/app.9.js 200 12ms
+2026-08-16T09:20:10Z INFO  request_id=pad0010 GET /assets/app.10.js 200 13ms
+2026-08-16T09:21:11Z INFO  request_id=pad0011 GET /assets/app.11.js 200 14ms
+2026-08-16T09:22:12Z INFO  request_id=pad0012 GET /assets/app.12.js 200 15ms
+2026-08-16T09:23:13Z INFO  request_id=pad0013 GET /assets/app.13.js 200 16ms
+2026-08-16T09:24:14Z INFO  request_id=pad0014 GET /assets/app.14.js 200 17ms
+2026-08-16T09:25:15Z INFO  request_id=pad0015 GET /assets/app.15.js 200 18ms
+2026-08-16T09:26:16Z INFO  request_id=pad0016 GET /assets/app.16.js 200 19ms
+2026-08-16T09:27:17Z INFO  request_id=pad0017 GET /assets/app.17.js 200 20ms
+2026-08-16T09:28:18Z INFO  request_id=pad0018 GET /assets/app.18.js 200 21ms
+2026-08-16T09:29:19Z INFO  request_id=pad0019 GET /assets/app.19.js 200 22ms
+2026-08-16T09:20:20Z INFO  request_id=pad0020 GET /assets/app.20.js 200 23ms
+2026-08-16T09:21:21Z INFO  request_id=pad0021 GET /assets/app.21.js 200 24ms
+2026-08-16T09:22:22Z INFO  request_id=pad0022 GET /assets/app.22.js 200 25ms
+2026-08-16T09:23:23Z INFO  request_id=pad0023 GET /assets/app.23.js 200 26ms
+2026-08-16T09:24:24Z INFO  request_id=pad0024 GET /assets/app.24.js 200 27ms
+2026-08-16T09:25:25Z INFO  request_id=pad0025 GET /assets/app.25.js 200 28ms
+2026-08-16T09:26:26Z INFO  request_id=pad0026 GET /assets/app.26.js 200 29ms
+2026-08-16T09:27:27Z INFO  request_id=pad0027 GET /assets/app.27.js 200 30ms
+2026-08-16T09:28:28Z INFO  request_id=pad0028 GET /assets/app.28.js 200 31ms
+2026-08-16T09:29:29Z INFO  request_id=pad0029 GET /assets/app.29.js 200 32ms
+2026-08-16T09:20:30Z INFO  request_id=pad0030 GET /assets/app.30.js 200 33ms
+2026-08-16T09:21:31Z INFO  request_id=pad0031 GET /assets/app.31.js 200 34ms
+2026-08-16T09:22:32Z INFO  request_id=pad0032 GET /assets/app.32.js 200 35ms
+2026-08-16T09:23:33Z INFO  request_id=pad0033 GET /assets/app.33.js 200 36ms
+2026-08-16T09:24:34Z INFO  request_id=pad0034 GET /assets/app.34.js 200 37ms
+2026-08-16T09:25:35Z INFO  request_id=pad0035 GET /assets/app.35.js 200 38ms
+2026-08-16T09:26:36Z INFO  request_id=pad0036 GET /assets/app.36.js 200 39ms
+2026-08-16T09:27:37Z INFO  request_id=pad0037 GET /assets/app.37.js 200 40ms
+2026-08-16T09:28:38Z INFO  request_id=pad0038 GET /assets/app.38.js 200 41ms
+2026-08-16T09:29:39Z INFO  request_id=pad0039 GET /assets/app.39.js 200 42ms
+2026-08-16T09:20:40Z INFO  request_id=pad0040 GET /assets/app.40.js 200 3ms
+2026-08-16T09:21:41Z INFO  request_id=pad0041 GET /assets/app.41.js 200 4ms
+2026-08-16T09:22:42Z INFO  request_id=pad0042 GET /assets/app.42.js 200 5ms
+2026-08-16T09:23:43Z INFO  request_id=pad0043 GET /assets/app.43.js 200 6ms
+2026-08-16T09:24:44Z INFO  request_id=pad0044 GET /assets/app.44.js 200 7ms
+2026-08-16T09:25:45Z INFO  request_id=pad0045 GET /assets/app.45.js 200 8ms
+2026-08-16T09:26:46Z INFO  request_id=pad0046 GET /assets/app.46.js 200 9ms
+2026-08-16T09:27:47Z INFO  request_id=pad0047 GET /assets/app.47.js 200 10ms
+2026-08-16T09:28:48Z INFO  request_id=pad0048 GET /assets/app.48.js 200 11ms
+2026-08-16T09:29:49Z INFO  request_id=pad0049 GET /assets/app.49.js 200 12ms
+2026-08-16T09:20:50Z INFO  request_id=pad0050 GET /assets/app.50.js 200 13ms
+2026-08-16T09:21:51Z INFO  request_id=pad0051 GET /assets/app.51.js 200 14ms
+2026-08-16T09:22:52Z INFO  request_id=pad0052 GET /assets/app.52.js 200 15ms
+2026-08-16T09:23:53Z INFO  request_id=pad0053 GET /assets/app.53.js 200 16ms
+2026-08-16T09:24:54Z INFO  request_id=pad0054 GET /assets/app.54.js 200 17ms
+2026-08-16T09:25:55Z INFO  request_id=pad0055 GET /assets/app.55.js 200 18ms
+2026-08-16T09:26:56Z INFO  request_id=pad0056 GET /assets/app.56.js 200 19ms
+2026-08-16T09:27:57Z INFO  request_id=pad0057 GET /assets/app.57.js 200 20ms
+2026-08-16T09:28:58Z INFO  request_id=pad0058 GET /assets/app.58.js 200 21ms
+2026-08-16T09:29:59Z INFO  request_id=pad0059 GET /assets/app.59.js 200 22ms

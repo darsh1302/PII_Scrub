@@ -1,0 +1,167 @@
+# BASE_SECURITY — mandatory credential protection.
+#
+# Every profile inherits this and no profile may weaken it (Requirement 20.3,
+# guardrail G5). The rationale: an operator who selects the wrong industry
+# profile should still never leak an API key. Schema validation rejects any
+# derived profile that sets a BASE_SECURITY entity below REDACT.
+#
+# Actions here are REDACT rather than REPLACE because a labelled placeholder
+# ([API_KEY]) confirms a secret existed at that position, which is useful to an
+# attacker reading a shared log excerpt.
+
+name: BASE_SECURITY
+version: "1.0.0"
+description: >
+  Mandatory detection of authentication credentials and secrets. Applied before
+  and regardless of any industry profile.
+
+inherits: []
+
+required_detectors:
+  - presidio
+  - custom_security
+
+entities:
+  - type: PASSWORD
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: HIGH
+    detection_methods: [regex, context]
+    description: "Passwords in assignments, URLs, or key/value pairs"
+
+  - type: PASSCODE
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: HIGH
+    detection_methods: [regex, context]
+    description: "Passcodes and secondary credentials"
+
+  - type: API_KEY
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.45
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 256
+    description: "Generic API keys, x-api-key headers, bearer values"
+
+  - type: AWS_ACCESS_KEY
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.6
+    severity: HIGH
+    detection_methods: [regex, validation]
+    max_pattern_span: 128
+    description: "AWS access key IDs (AKIA/ASIA prefixed) and secret keys"
+
+  - type: ACCESS_TOKEN
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.45
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 512
+    description: "OAuth and bearer access tokens"
+
+  - type: REFRESH_TOKEN
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.45
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 512
+    description: "Refresh tokens"
+
+  - type: OAUTH_TOKEN
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.45
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 512
+    description: "OAuth tokens of any grant type"
+
+  - type: JWT
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.6
+    severity: HIGH
+    detection_methods: [regex, validation]
+    max_pattern_span: 4096
+    description: "JSON Web Tokens — header.payload.signature"
+
+  - type: AUTHORIZATION_HEADER
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 1024
+    description: "Authorization request headers including their value"
+
+  - type: CLIENT_SECRET
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: HIGH
+    detection_methods: [regex, context]
+    description: "OAuth client secrets"
+
+  - type: SESSION_COOKIE
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 1024
+    description: "Session identifiers and auth cookies"
+
+  # max_pattern_span drives chunk overlap. An RSA-2048 PEM block is ~1700
+  # chars and RSA-4096 far more; the original 200-char overlap split these
+  # across chunk boundaries and detected them in neither (COR-02).
+  - type: PRIVATE_KEY
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.7
+    severity: HIGH
+    detection_methods: [regex]
+    max_pattern_span: 8192
+    description: "PEM private key blocks (RSA, EC, DSA, PKCS#8)"
+
+  - type: SSH_PRIVATE_KEY
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.7
+    severity: HIGH
+    detection_methods: [regex]
+    max_pattern_span: 8192
+    description: "OpenSSH private key blocks"
+
+  - type: DATABASE_CREDENTIAL
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 512
+    description: "Database usernames and passwords in configuration"
+
+  - type: CLOUD_CREDENTIAL
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 512
+    description: "Cloud provider credentials and service account keys"
+
+  - type: CONNECTION_STRING
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: HIGH
+    detection_methods: [regex]
+    max_pattern_span: 1024
+    description: "Connection strings carrying embedded credentials"

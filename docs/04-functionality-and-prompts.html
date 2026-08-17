@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Functionality · PII Scrubbing Agent</title>
+<style>
+:root {
+  --bg: #0f1419;
+  --panel: #161c24;
+  --border: #2a333f;
+  --text: #dbe4ee;
+  --muted: #8b9bb0;
+  --accent: #4db6ac;
+  --accent-dim: #26706a;
+  --code-bg: #0b0f14;
+  --warn: #e6a23c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.wrap { display: flex; min-height: 100vh; }
+nav {
+  width: 240px;
+  flex: 0 0 240px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 28px 20px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+nav .brand {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: .02em;
+  margin-bottom: 22px;
+  color: #fff;
+}
+nav a {
+  display: block;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+}
+nav a:hover { background: #1d252f; color: var(--text); }
+nav a.active {
+  background: var(--accent-dim);
+  color: #fff;
+  font-weight: 600;
+}
+main { flex: 1; min-width: 0; padding: 48px 56px 96px; max-width: 960px; }
+h1, h2, h3, h4 { color: #fff; line-height: 1.25; }
+h1 { font-size: 31px; margin: 0 0 26px; }
+h2 {
+  font-size: 22px;
+  margin: 44px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+h3 { font-size: 17px; margin: 30px 0 10px; }
+p { margin: 0 0 14px; }
+a { color: var(--accent); }
+ul, ol { margin: 0 0 14px; padding-left: 24px; }
+li { margin-bottom: 6px; }
+strong { color: #fff; }
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font: 13.5px/1.5 "Cascadia Code", Consolas, ui-monospace, monospace;
+  color: #9ad9d1;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-dim);
+  border-radius: 6px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 0 0 18px;
+}
+pre code { background: none; border: 0; padding: 0; color: #cfe3e0; }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 20px;
+  font-size: 14.5px;
+  display: block;
+  overflow-x: auto;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 9px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+th { background: #1d252f; color: #fff; font-weight: 600; }
+tr:nth-child(even) td { background: #131922; }
+blockquote {
+  margin: 0 0 18px;
+  padding: 10px 16px;
+  border-left: 3px solid var(--warn);
+  background: #1d1a14;
+  color: #e8d9bd;
+}
+hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+pre.mermaid {
+  background: #f7fbfa;
+  border-left-color: var(--accent);
+  text-align: center;
+}
+footer {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 860px) {
+  .wrap { flex-direction: column; }
+  nav { width: 100%; flex: none; height: auto; position: static; }
+  main { padding: 28px 20px 64px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <div class="brand">🛡️ PII Scrubbing Agent</div>
+  <a href="../README.html">Overview</a>
+  <a href="01-how-it-works.html">How it works</a>
+  <a href="02-architecture-and-flow.html">Architecture</a>
+  <a href="03-setup.html">Setup</a>
+  <a href="04-functionality-and-prompts.html" class="active">Functionality</a>
+</nav>
+<main>
+<h1>Functionality, Prompts and Expected Behaviour</h1>
+<h2>Capabilities</h2>
+<p>The agent has six tools. They are deliberately coarse: one call performs a whole
+stage, so the pipeline cannot be left half-executed by a reasoning step that
+stopped early.</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list_sources</code></td>
+<td>List scannable files in the scan roots, plus anything loaded this session</td>
+</tr>
+<tr>
+<td><code>scan</code></td>
+<td>Detect and report. Produces no cleaned copy.</td>
+</tr>
+<tr>
+<td><code>scrub</code></td>
+<td>Detect, apply policy, verify, and produce a cleaned copy</td>
+</tr>
+<tr>
+<td><code>explain_profile</code></td>
+<td>Describe what a profile detects and how it handles each type</td>
+</tr>
+<tr>
+<td><code>export</code></td>
+<td>Confirm a cleaned artifact is available</td>
+</tr>
+<tr>
+<td><code>set_preference</code></td>
+<td>Remember a profile, destination, threshold, locale or action for the session</td>
+</tr>
+</tbody>
+</table>
+<p>There is deliberately no detokenization tool. <code>build_registry</code> raises if any tool
+name contains <code>detokenize</code>, <code>reverse</code>, <code>unmask</code>, <code>reveal</code> or <code>decrypt</code>. Reversal is
+an out-of-band operator action, because a reversal capability inside the agent
+turns prompt injection into an exfiltration primitive.</p>
+<h2>Getting content in</h2>
+<p><strong>Upload</strong> — drag a <code>.txt</code>, <code>.log</code>, <code>.json</code>, <code>.jsonl</code>, <code>.csv</code> or <code>.xml</code> file into
+the uploader. Uploads bypass the scan-root allowlist because you supplied the
+bytes; there is no filesystem to escape. Size and type limits still apply. The
+bytes are held in memory and never written to disk.</p>
+<p><strong>By path</strong> — reference a file inside <code>PII_AGENT_SCAN_ROOTS</code>. Anything outside is
+refused, as are sensitive paths inside a root.</p>
+<p><strong>Paste</strong> — paste text directly into chat, subject to a character limit.</p>
+<p>Refer to an upload by the name shown in the confirmation. A bare filename
+resolves to session-loaded content first; anything containing a path separator is
+treated as an explicit filesystem request and goes through containment, so a label
+can never shadow a path.</p>
+<h2>Prompts</h2>
+<p>The agent interprets intent broadly. &quot;Find PII&quot;, &quot;is there anything sensitive in
+here&quot;, &quot;scrub this&quot; and &quot;anonymize it&quot; are the same request.</p>
+<h3>Recommended</h3>
+<pre><code>scrub large.txt with DEFAULT_PII for INTERNAL_SIEM
+</code></pre>
+<p>One line supplying source, profile and destination. Nothing to ask back.</p>
+<h3>Report only</h3>
+<pre><code>scan large.txt with DEFAULT_PII for INTERNAL_SIEM
+</code></pre>
+<p>Gives the findings table without producing a cleaned copy.</p>
+<h3>Both, in one turn</h3>
+<pre><code>scan large.txt for INTERNAL_SIEM and give me a clean copy
+</code></pre>
+<h3>Other useful phrasings</h3>
+<pre><code>what can you scan?
+what does DEFAULT_PII cover?
+scrub it and redact everything
+use BASE_SECURITY on app.log for FILE
+scan large.txt for EXTERNAL_LLM
+remember that my destination is INTERNAL_SIEM
+</code></pre>
+<p>&quot;It&quot; and &quot;that file&quot; resolve to the most recent source in session memory.</p>
+<h3>Efficiency note</h3>
+<p><code>scrub</code> runs the full scan internally. Running <code>scan</code> and then <code>scrub</code> processes
+the file twice and doubles the wait for no additional information. Go straight to
+<code>scrub</code> when you know you want the output.</p>
+<h2>Destination</h2>
+<p>Where the cleaned data is going. Required whenever a destination-sensitive type is
+present, and the agent asks rather than guessing.</p>
+<table>
+<thead>
+<tr>
+<th>Destination</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INTERNAL_SIEM</code></td>
+<td>Staying inside your infrastructure for security analysis</td>
+</tr>
+<tr>
+<td><code>FILE</code></td>
+<td>A local copy you are keeping</td>
+</tr>
+<tr>
+<td><code>EXTERNAL_ANALYTICS</code></td>
+<td>A third-party analytics platform</td>
+</tr>
+<tr>
+<td><code>EXTERNAL_LLM</code></td>
+<td>Pasting into a hosted model</td>
+</tr>
+<tr>
+<td><code>S3</code></td>
+<td>Object storage, treated as external</td>
+</tr>
+</tbody>
+</table>
+<p>In <code>DEFAULT_PII</code>, two types are destination-aware:</p>
+<ul>
+<li><code>IP_ADDRESS</code> — <code>ALLOW</code> for <code>INTERNAL_SIEM</code>, <code>REPLACE</code> for <code>FILE</code>, <code>REDACT</code> for
+the three external destinations</li>
+<li><code>DATE_TIME</code> — <code>ALLOW</code> for <code>INTERNAL_SIEM</code></li>
+</ul>
+<p>Nothing else changes. Credentials, SSNs, cards and names are handled identically
+regardless of destination, and a destination can only make policy stricter, never
+weaker.</p>
+<p>The reasoning: a log with every timestamp and source IP stripped cannot be
+correlated, which defeats the purpose of keeping logs. Inside your own SIEM those
+identifiers are the investigation. Sent to a vendor, the same IP is personal data.
+Guessing either way is wrong, so the agent asks.</p>
+<h2>Scrub actions</h2>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Output</th>
+<th>Preserves correlation</th>
+<th>Reversible</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ALLOW</code></td>
+<td>untouched</td>
+<td>yes</td>
+<td>n/a</td>
+</tr>
+<tr>
+<td><code>REPLACE</code></td>
+<td><code>[US_SSN]</code></td>
+<td>no</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>MASK</code></td>
+<td><code>****</code></td>
+<td>no</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>HASH</code></td>
+<td><code>[US_SSN:a3f9c2e1b7d40856]</code></td>
+<td>yes</td>
+<td>no, but guessable on small domains</td>
+</tr>
+<tr>
+<td><code>TOKENIZE</code></td>
+<td>stable vault token</td>
+<td>yes</td>
+<td>out-of-band only</td>
+</tr>
+<tr>
+<td><code>REDACT</code></td>
+<td><code>[REDACTED:US_SSN]</code></td>
+<td>no</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>BLOCK</code></td>
+<td>no artifact at all</td>
+<td>n/a</td>
+<td>n/a</td>
+</tr>
+</tbody>
+</table>
+<p><code>MASK</code> uses a fixed 8 characters for HIGH-severity entities rather than matching
+length — a nine-character masked SSN still discloses format and narrows the value.</p>
+<p><code>BLOCK</code> is not a synonym for <code>REDACT</code>. <code>REDACT</code> removes a span and still yields
+output; <code>BLOCK</code> suppresses the entire artifact and is handled before any
+application, so half-sanitized output is never produced.</p>
+<p>You do not choose actions per entity — the profile does. Requests for stricter
+handling are honoured; requests for weaker handling are discarded and reported as
+denied. That is the ratchet.</p>
+<h2>Profiles</h2>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BASE_SECURITY</code></td>
+<td>Built. Credentials and secrets. Inherited by everything, always applied.</td>
+</tr>
+<tr>
+<td><code>DEFAULT_PII</code></td>
+<td>Built. Baseline personal identifiers. Applied when no profile is named.</td>
+</tr>
+<tr>
+<td><code>HEALTHCARE</code>, <code>FINANCIAL</code>, <code>PAYMENT_PCI</code>, <code>RETAIL</code>, <code>EDUCATION</code>, <code>HR_PAYROLL</code>, <code>LEGAL</code>, <code>GOVERNMENT</code>, <code>TELECOM</code>, <code>AUTOMOTIVE</code>, <code>AI_SAAS</code></td>
+<td>Specified in requirements, not yet built (Phase 8)</td>
+</tr>
+</tbody>
+</table>
+<p>Every industry profile resolves to <code>BASE_SECURITY + DEFAULT_PII + domain-specific</code>
+rules. Naming an unbuilt profile fails at profile resolution rather than silently
+falling back — a silent fallback would report coverage the profile did not deliver.</p>
+<p><code>DEFAULT_PII</code> covers <code>PERSON</code>, <code>EMAIL_ADDRESS</code>, <code>PHONE_NUMBER</code>, <code>US_SSN</code>,
+<code>CREDIT_CARD</code>, <code>US_PASSPORT</code>, <code>US_DRIVER_LICENSE</code>, <code>US_BANK_NUMBER</code>, <code>IBAN_CODE</code>,
+<code>MEDICAL_LICENSE</code>, <code>LOCATION</code>, <code>IP_ADDRESS</code>, <code>DATE_TIME</code> and <code>URL</code>.</p>
+<p><code>BASE_SECURITY</code> covers passwords, API keys, AWS keys, access and refresh tokens,
+OAuth tokens, JWTs, authorization headers, client secrets, session cookies, PEM
+and SSH private keys, database credentials, cloud credentials and
+credential-bearing connection strings.</p>
+<h2>Results</h2>
+<p>A completed run produces:</p>
+<ul>
+<li><strong>Findings table</strong> — entity type, severity, masked preview, confidence, which
+detector found it, and the resolved action. Previews show a type label only for
+HIGH-severity entities, so credentials never render to screen. Confidence from
+spaCy is marked <code>(heuristic)</code> because spaCy emits a constant, not a calibrated
+probability.</li>
+<li><strong>Coverage</strong> — bytes and chunks processed against totals, which detectors were
+healthy, and whether anything was missing.</li>
+<li><strong>Downloads</strong> — <code>&lt;name&gt;-cleaned.&lt;ext&gt;</code> and <code>&lt;name&gt;-findings.json</code>. Nothing is
+written to disk; the download is the egress path, and the artifact dies with the
+session.</li>
+<li><strong>Provenance</strong> — profile version and exact engine versions, so the run can be
+reproduced.</li>
+<li><strong>Audit record</strong> — appended to the hash-chained JSONL, containing no sensitive
+data.</li>
+</ul>
+<h2>Refusals</h2>
+<p>Refusals are named outcomes, not errors. Findings are still reported in every
+case; only the artifact is withheld.</p>
+<table>
+<thead>
+<tr>
+<th>Refusal</th>
+<th>Meaning</th>
+<th>What changes it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NEEDS_DESTINATION</code></td>
+<td>Handling depends on where the data is going</td>
+<td>Name a destination</td>
+</tr>
+<tr>
+<td><code>DEGRADED_COVERAGE</code></td>
+<td>Part of the source could not be inspected, or a detector was unavailable</td>
+<td>Fix the detector, or scan a smaller scope</td>
+</tr>
+<tr>
+<td><code>BLOCKED_ARTIFACT</code></td>
+<td>Policy forbids any cleaned copy of this content</td>
+<td>Nothing — this is the intended outcome</td>
+</tr>
+<tr>
+<td><code>RESIDUAL_PII_DETECTED</code></td>
+<td>Verification found something the scrub should have removed</td>
+<td>Nothing you can do; this is a defect to report</td>
+</tr>
+<tr>
+<td><code>INVALID_PROFILE</code></td>
+<td>Profile missing or failed schema validation</td>
+<td>Name a built profile</td>
+</tr>
+<tr>
+<td><code>TIMEOUT</code></td>
+<td>Exceeded the time budget, so coverage is incomplete</td>
+<td>Smaller file, or raise the budget</td>
+</tr>
+<tr>
+<td><code>LIMIT_EXCEEDED</code></td>
+<td>Source is over a configured limit</td>
+<td>Split the source</td>
+</tr>
+<tr>
+<td><code>SOURCE_ERROR</code></td>
+<td>Source could not be read</td>
+<td>Check the path and permissions</td>
+</tr>
+</tbody>
+</table>
+<p>If the agent's prose disagrees with the status fields, trust the fields. The model
+writes the prose; the core sets <code>refusal</code>, <code>artifact_available</code> and
+<code>verified_clean</code>.</p>
+<h2>Security findings</h2>
+<p>If the content contains prompt-injection patterns, they are reported as an
+observation about the source. They never block a cleaned copy and never change a
+scrub action. The included sample files contain planted payloads on purpose so
+this path stays exercised.</p>
+<p>Seeing this on a genuine production log is worth investigating upstream: something
+is writing attacker-controlled text into your logs.</p>
+<h2>Performance</h2>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3.3 KB</td>
+<td>~5 s</td>
+</tr>
+<tr>
+<td>260 KB</td>
+<td>~110 s</td>
+</tr>
+<tr>
+<td>10 MB</td>
+<td>over an hour — not currently practical</td>
+</tr>
+</tbody>
+</table>
+<p>Throughput is roughly 2.4 KB/s. Profiled, Presidio's <code>analyze</code> accounts for 79%,
+within which its own spaCy pipeline is 19% — duplicating NLP work we already do.
+The verification re-scan is a further 39% and is not negotiable. Chunks are
+independent by construction, so parallelism is available but not yet implemented.</p>
+<h2>What the agent will not do</h2>
+<ul>
+<li>Reveal a tokenized value</li>
+<li>Choose a weaker action than policy mandates, even if asked directly</li>
+<li>Produce a cleaned copy when coverage was incomplete</li>
+<li>Certify compliance. It assists with detection; it does not replace a compliance
+programme, and automated detection never catches everything.</li>
+</ul>
+
+<footer>Generated from 04-functionality-and-prompts.md by <code>tools_dev/build_docs.py</code>. The Markdown is the source of truth.</footer>
+</main>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+</script>
+</body>
+</html>

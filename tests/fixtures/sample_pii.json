@@ -1,0 +1,22 @@
+{
+  "request_id": "a3f9c12e",
+  "timestamp": "2026-08-16T09:15:44Z",
+  "user": {
+    "name": "Jane Fairweather",
+    "email": "jane.fairweather@example.com",
+    "phone": "+1 (415) 555-0142",
+    "ssn": "482-71-9053"
+  },
+  "payment": {
+    "card_number": "4532015112830366",
+    "expiry": "09/29"
+  },
+  "config": {
+    "api_key": "sk-live-9fK2mQ7xR4tZ8vB1nH6jL0pW",
+    "database_url": "postgresql://svc_user:hunter2@db.internal:5432/records"
+  },
+  "audit": {
+    "source_ip": "203.0.113.42",
+    "trace_id": "c1e4f770-1234-4c8a-9f3b-2e7d1a5b9c04"
+  }
+}

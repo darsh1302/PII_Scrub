@@ -1,0 +1,183 @@
+# DEFAULT_PII — baseline personal-identifier protection.
+#
+# Applied when no profile is specified, and inherited by every industry profile.
+#
+# Two rules here exist because of review finding COR-04. The original default
+# enabled DATE_TIME and IP_ADDRESS with REPLACE, which on a log file — the
+# primary use case — replaced every timestamp and every source IP and produced
+# output useless for debugging or SIEM correlation.
+#
+#   * DATE_TIME uses field_context_exempt so log-structural timestamps survive
+#     while dates in message bodies remain in scope.
+#   * IP_ADDRESS uses destination_actions so operational identifiers are kept
+#     for INTERNAL_SIEM and scrubbed for anything external (Requirement 40.2).
+#
+# Note US_SSN and CREDIT_CARD cannot be set to HASH here: schema validation
+# rejects it because their value spaces are small enough to exhaust (G14).
+
+name: DEFAULT_PII
+version: "1.0.0"
+description: >
+  Baseline PII detection covering common personal identifiers. Inherits
+  mandatory credential protection from BASE_SECURITY.
+
+inherits:
+  - BASE_SECURITY
+
+required_detectors:
+  - presidio
+  - spacy          # contextual PERSON detection needs NER, not regex
+
+entities:
+  - type: PERSON
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.55
+    severity: MEDIUM
+    detection_methods: [ner, context]
+    max_pattern_span: 128
+    description: "Names of individuals"
+
+  - type: EMAIL_ADDRESS
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 320
+    description: "Email addresses"
+
+  - type: PHONE_NUMBER
+    enabled: true
+    action: MASK
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 32
+    description: "Telephone numbers in international and national formats"
+
+  # REDACT rather than MASK: a masked SSN still reveals its length and format,
+  # and the surrounding context often narrows the value further.
+  - type: US_SSN
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.4
+    severity: MEDIUM
+    detection_methods: [regex, validation, context]
+    max_pattern_span: 16
+    description: "US Social Security Numbers"
+
+  - type: CREDIT_CARD
+    enabled: true
+    action: MASK
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 32
+    description: "Payment card numbers, Luhn-validated"
+
+  - type: US_PASSPORT
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.45
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 16
+    description: "US passport numbers"
+
+  - type: US_DRIVER_LICENSE
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.45
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 24
+    description: "US driver license numbers"
+
+  - type: US_BANK_NUMBER
+    enabled: true
+    action: MASK
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 24
+    description: "US bank account numbers"
+
+  - type: IBAN_CODE
+    enabled: true
+    action: MASK
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 42
+    description: "International Bank Account Numbers"
+
+  - type: MEDICAL_LICENSE
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 24
+    description: "DEA and medical license numbers"
+
+  - type: LOCATION
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.6
+    severity: LOW
+    detection_methods: [ner, context]
+    max_pattern_span: 256
+    description: "Physical addresses and place references"
+
+  # Destination-aware: an IP is an operational identifier for internal
+  # investigation and a personal identifier when shipped externally.
+  # With no destination set the agent asks rather than defaulting destructively
+  # (Requirement 19.9).
+  - type: IP_ADDRESS
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.6
+    severity: LOW
+    detection_methods: [regex, validation]
+    max_pattern_span: 48
+    description: "IPv4 and IPv6 addresses"
+    destination_actions:
+      INTERNAL_SIEM: ALLOW
+      FILE: REPLACE
+      EXTERNAL_ANALYTICS: REDACT
+      EXTERNAL_LLM: REDACT
+      S3: REDACT
+
+  # Log timestamps are structural, not personal. Scrubbing them destroys the
+  # ability to correlate events, which is the point of keeping logs.
+  # Dates inside message bodies stay in scope.
+  - type: DATE_TIME
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.7
+    severity: LOW
+    detection_methods: [regex, ner]
+    max_pattern_span: 64
+    description: "Dates and times that could identify an individual"
+    field_context_exempt:
+      - leading_iso_timestamp
+      - "@timestamp"
+      - ts
+      - time
+      - timestamp
+      - datetime
+      - created_at
+      - updated_at
+      - eventTime
+    destination_actions:
+      INTERNAL_SIEM: ALLOW
+
+  - type: URL
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.7
+    severity: LOW
+    detection_methods: [regex]
+    max_pattern_span: 2048
+    description: "URLs that may embed identifiers or tokens in query strings"

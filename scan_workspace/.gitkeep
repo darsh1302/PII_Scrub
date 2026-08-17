@@ -1,0 +1,6 @@
+This directory is the default PII_AGENT_SCAN_ROOTS target.
+
+It is published empty on purpose. At runtime it holds the logs and files you
+point the agent at, and those are exactly the files that should never reach a
+public repository. .gitignore excludes its contents and keeps this marker so the
+directory exists after a clone.

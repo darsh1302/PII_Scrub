@@ -1,0 +1,4 @@
+patient_id,name,dob,mrn,diagnosis,medication,insurance_member_id
+P-10021,Jane Fairweather,1984-03-11,MRN-2026-78432,Type 2 diabetes,Metformin 500mg,HP-99182734
+P-10022,Aaron Whitlock,1971-11-02,MRN-2026-78433,Hypertension,Lisinopril 10mg,HP-99182735
+P-10023,Priya Raghunathan,1990-07-24,MRN-2026-78434,Asthma,Albuterol inhaler,HP-99182736

@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PII Scrubbing Agent — Requirements Dashboard</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --bg: #0f172a;
+            --bg-card: #1e293b;
+            --bg-table: #1e293b;
+            --bg-row-hover: #334155;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --mvp-badge: #10b981;
+            --phase2-badge: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Project Stage Banner */
+        .stage-banner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .stage-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+        }
+
+        .stage-step .circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            border: 3px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .stage-step.completed .circle {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .stage-step.active .circle {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        .stage-step .label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .stage-step.completed .label { color: var(--success); }
+        .stage-step.active .label { color: var(--primary); font-weight: 700; }
+
+        .stage-connector {
+            width: 60px;
+            height: 3px;
+            background: var(--border);
+            margin-top: -1.5rem;
+        }
+
+        .stage-connector.done { background: var(--success); }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(99, 102, 241, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(99, 102, 241, 0.6); }
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .stat-card .label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-card.mvp .number { color: var(--success); }
+        .stat-card.phase2 .number { color: var(--warning); }
+
+        /* Category Section */
+        .category-section {
+            margin-bottom: 2rem;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .category-header:hover { border-color: var(--primary); }
+
+        .category-header h2 {
+            font-size: 1.1rem;
+            flex: 1;
+        }
+
+        .category-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        .badge-mvp { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+        .badge-phase2 { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .badge-count { background: rgba(99, 102, 241, 0.15); color: var(--primary); }
+
+        /* Table */
+        .req-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .req-table thead {
+            background: #0f172a;
+        }
+
+        .req-table th {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .req-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            vertical-align: top;
+        }
+
+        .req-table tr:hover { background: var(--bg-row-hover); }
+
+        .req-table tr:last-child td { border-bottom: none; }
+
+        /* Checkbox */
+        .checkbox-cell {
+            text-align: center;
+            width: 50px;
+        }
+
+        .custom-checkbox {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--success);
+            cursor: pointer;
+        }
+
+        /* Badges in table */
+        .phase-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        .phase-mvp { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .phase-2 { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+        .priority-high { color: var(--danger); font-weight: 600; }
+        .priority-medium { color: var(--warning); font-weight: 600; }
+        .priority-low { color: var(--info); font-weight: 600; }
+
+        .status-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        .status-not-started { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.3); }
+        .status-in-progress { background: rgba(99, 102, 241, 0.15); color: var(--primary); border: 1px solid rgba(99, 102, 241, 0.3); }
+        .status-done { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+
+        /* Expandable details */
+        .ac-toggle {
+            cursor: pointer;
+            color: var(--primary);
+            font-size: 0.8rem;
+            text-decoration: underline;
+        }
+
+        .ac-details {
+            display: none;
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 6px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            line-height: 1.8;
+        }
+
+        .ac-details.show { display: block; }
+
+        .ac-details li {
+            margin-left: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin: 1.5rem 0;
+            padding: 1rem 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: var(--border);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            border-radius: 99px;
+            transition: width 0.5s ease;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            .stage-banner { flex-wrap: wrap; gap: 1rem; }
+            .stage-connector { display: none; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .req-table { font-size: 0.8rem; }
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🛡️ PII Scrubbing Agent</h1>
+    <p>AI Agent Requirements Dashboard — AIDLC Tracking</p>
+</div>
+
+<!-- Project Stage -->
+<div class="stage-banner">
+    <div class="stage-step completed">
+        <div class="circle">✓</div>
+        <div class="label">Requirements</div>
+    </div>
+    <div class="stage-connector done"></div>
+    <div class="stage-step completed">
+        <div class="circle">✓</div>
+        <div class="label">Design</div>
+    </div>
+    <div class="stage-connector done"></div>
+    <div class="stage-step completed">
+        <div class="circle">✓</div>
+        <div class="label">Tasks</div>
+    </div>
+    <div class="stage-connector done"></div>
+    <div class="stage-step active">
+        <div class="circle">4</div>
+        <div class="label">Implementation</div>
+    </div>
+    <div class="stage-connector"></div>
+    <div class="stage-step">
+        <div class="circle">5</div>
+        <div class="label">Testing</div>
+    </div>
+    <div class="stage-connector"></div>
+    <div class="stage-step">
+        <div class="circle">6</div>
+        <div class="label">Deployment</div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="number">46</div>
+        <div class="label">Total Requirements</div>
+    </div>
+    <div class="stat-card mvp">
+        <div class="number">41</div>
+        <div class="label">MVP (Phase 1)</div>
+    </div>
+    <div class="stat-card phase2">
+        <div class="number">5</div>
+        <div class="label">Phase 2</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">7</div>
+        <div class="label">Categories</div>
+    </div>
+    <div class="stat-card">
+        <div class="number" id="completed-count">0</div>
+        <div class="label">Completed</div>
+    </div>
+</div>
+
+<!-- Progress -->
+<div class="progress-container">
+    <div class="progress-label">
+        <span>Overall Progress</span>
+        <span id="progress-percent">0%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background: var(--success);"></div> MVP (Phase 1)</div>
+    <div class="legend-item"><div class="legend-dot" style="background: var(--warning);"></div> Phase 2</div>
+    <div class="legend-item"><div class="legend-dot" style="background: var(--danger);"></div> High Priority</div>
+    <div class="legend-item"><div class="legend-dot" style="background: var(--warning);"></div> Medium Priority</div>
+    <div class="legend-item"><div class="legend-dot" style="background: var(--info);"></div> Low Priority</div>
+    <div class="legend-item"><span style="font-size:1.1rem">☑️</span> Check = Implemented</div>
+</div>
+
+<!-- Category: Agent Core -->
+<div class="category-section">
+    <div class="category-header">
+        <h2>🧠 Agent Core Architecture</h2>
+        <span class="category-badge badge-mvp">MVP</span>
+        <span class="category-badge badge-count">6 requirements</span>
+    </div>
+    <table class="req-table">
+        <thead>
+            <tr>
+                <th class="checkbox-cell">Done</th>
+                <th>ID</th>
+                <th>Requirement</th>
+                <th>User Story</th>
+                <th>Priority</th>
+                <th>Phase</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="1"></td>
+                <td><strong>R1</strong></td>
+                <td>Agent Reasoning Loop</td>
+                <td>Operate as autonomous agent using ReAct pattern via LangGraph</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Implement ReAct loop via LangGraph (observe → reason → act → observe)</li>
+                            <li>Use GPT-4o as Agent_Brain for reasoning</li>
+                            <li>Enter THINKING state on user request</li>
+                            <li>Support multi-step tool chaining</li>
+                            <li>Terminate when goal fulfilled or user input needed</li>
+                            <li>Handle tool failures with alternative approaches</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="2"></td>
+                <td><strong>R2</strong></td>
+                <td>Planning & Decision Making</td>
+                <td>Plan approach before executing complex requests</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Formulate Plan for complex multi-source requests</li>
+                            <li>Select source tool based on request context</li>
+                            <li>Decide detection sensitivity from instructions/preferences</li>
+                            <li>Decide Scrub_Profile from user context</li>
+                            <li>Present Plan to user for ambiguous requests</li>
+                            <li>Ask clarifying questions vs. making assumptions</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="3"></td>
+                <td><strong>R3</strong></td>
+                <td>Conversational Chat Interface</td>
+                <td>Interact via natural language chat in Streamlit</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Streamlit chat UI with threaded conversation</li>
+                            <li>Display Agent_State as status indicator</li>
+                            <li>Stream responses in real-time</li>
+                            <li>Support NL requests: "Scan this file", "Check CloudWatch"</li>
+                            <li>Display entities & stats inline in conversation</li>
+                            <li>Accept pasted text in chat messages</li>
+                            <li>File upload within chat for scanning</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="4"></td>
+                <td><strong>R4</strong></td>
+                <td>Agent State Machine</td>
+                <td>Visibility into agent's current operational state</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>States: IDLE → THINKING → PLANNING → EXECUTING → ANALYZING → REPORTING → WAITING_FOR_INPUT</li>
+                            <li>Display current state in Chat_Interface</li>
+                            <li>Transition rules for each state (9 transitions defined)</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="5"></td>
+                <td><strong>R5</strong></td>
+                <td>Session Memory & Context</td>
+                <td>Remember conversation context and preferences in session</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Maintain: chat history, preferences, scanned sources, patterns</li>
+                            <li>Apply remembered profile to subsequent requests</li>
+                            <li>Resolve references ("scan that file again")</li>
+                            <li>Avoid repeating answered questions</li>
+                            <li>Session-scoped, not persistent across browser sessions</li>
+                            <li>Summarize preferences on request</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="6"></td>
+                <td><strong>R6</strong></td>
+                <td>Tool Registry & Invocation</td>
+                <td>Tools defined in registry with clear schemas for dynamic selection</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Registry with names, descriptions, input/output schemas</li>
+                            <li>Agent_Brain selects tools from registry</li>
+                            <li>Log invocations (name, params, duration, status)</li>
+                            <li>Extensible — new tools without core changes</li>
+                            <li>Validate params before invocation</li>
+                            <li>Handle unavailable tools gracefully</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Category: Agent Tools -->
+<div class="category-section">
+    <div class="category-header">
+        <h2>🔧 Agent Tools</h2>
+        <span class="category-badge badge-mvp">MVP</span>
+        <span class="category-badge badge-count">7 requirements</span>
+    </div>
+    <table class="req-table">
+        <thead>
+            <tr>
+                <th class="checkbox-cell">Done</th>
+                <th>ID</th>
+                <th>Requirement</th>
+                <th>User Story</th>
+                <th>Priority</th>
+                <th>Phase</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="7"></td>
+                <td><strong>R7</strong></td>
+                <td>Presidio Detection Tool</td>
+                <td>Rule-based PII detection (13 entity types)</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Detect: PERSON, EMAIL, PHONE, SSN, CREDIT_CARD, LOCATION, IP, DATE, PASSPORT, LICENSE, MEDICAL, IBAN, BANK_NUMBER</li>
+                            <li>Accept Confidence_Threshold parameter</li>
+                            <li>Return: type, start, end, confidence, text</li>
+                            <li>Empty result for no PII</li>
+                            <li>Optional entity type filter</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="8"></td>
+                <td><strong>R8</strong></td>
+                <td>SpaCy NER Tool</td>
+                <td>NLP-based contextual entity recognition</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>NER using spaCy language models</li>
+                            <li>Detect: PERSON, ORG, LOCATION, DATE</li>
+                            <li>Return entities with confidence</li>
+                            <li>Use in combination with Presidio_Tool</li>
+                            <li>Report model load failure gracefully</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="9"></td>
+                <td><strong>R9</strong></td>
+                <td>File Reader Tool</td>
+                <td>Read files from disk for scanning</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Accept local file path, return content</li>
+                            <li>Support: .txt, .log, .json, .jsonl, .csv, .xml</li>
+                            <li>Buffered/streaming for large files</li>
+                            <li>Validate file exists and is accessible</li>
+                            <li>Reject path traversal attempts</li>
+                            <li>Overlap between chunks for split entities</li>
+                            <li>Report file metadata for planning</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="10"></td>
+                <td><strong>R10</strong></td>
+                <td>AWS CloudWatch Tool</td>
+                <td>Pull logs from CloudWatch for scanning</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Accept: region, log group, stream, start/end time</li>
+                            <li>Retrieve events as normalized content</li>
+                            <li>Preserve metadata (timestamp, group, stream, event ID)</li>
+                            <li>Least-privilege IAM permissions</li>
+                            <li>Batched retrieval</li>
+                            <li>No unsanitized copy storage</li>
+                            <li>Descriptive error for missing credentials</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="11"></td>
+                <td><strong>R11</strong></td>
+                <td>Windows Event Log Tool</td>
+                <td>Read Windows Event Logs for scanning</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Channels: Application, System, Security, custom</li>
+                            <li>Preserve metadata: Event ID, Provider, Level, etc.</li>
+                            <li>Return message and configurable attributes</li>
+                            <li>Optional filters: time range, level, provider</li>
+                            <li>Permission error for inaccessible channels</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="12"></td>
+                <td><strong>R12</strong></td>
+                <td>Anonymizer Tool</td>
+                <td>Redact, mask, or transform detected PII</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Actions: REPLACE, MASK, HASH, TOKENIZE, REDACT, BLOCK</li>
+                            <li>REPLACE → [ENTITY_TYPE]</li>
+                            <li>MASK → asterisks</li>
+                            <li>HASH → salted SHA-256</li>
+                            <li>TOKENIZE → surrogate ID + Token_Vault</li>
+                            <li>REDACT → remove entirely</li>
+                            <li>Return original if no entities</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="13"></td>
+                <td><strong>R13</strong></td>
+                <td>Profile Resolver Tool</td>
+                <td>Resolve detection rules & actions from active profile</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Accept profile name → return rules & actions</li>
+                            <li>Resolve inheritance (BASE_SECURITY + DEFAULT_PII + industry)</li>
+                            <li>Combine multiple profiles, resolve conflicts</li>
+                            <li>Priority: BLOCK > REDACT > TOKENIZE > HASH > MASK > REPLACE > ALLOW</li>
+                            <li>INVALID_PROFILE error for bad names</li>
+                            <li>Read from YAML config</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Category: Agent Intelligence -->
+<div class="category-section">
+    <div class="category-header">
+        <h2>🤖 Agent Intelligence</h2>
+        <span class="category-badge badge-mvp">MVP</span>
+        <span class="category-badge badge-count">3 requirements</span>
+    </div>
+    <table class="req-table">
+        <thead>
+            <tr>
+                <th class="checkbox-cell">Done</th>
+                <th>ID</th>
+                <th>Requirement</th>
+                <th>User Story</th>
+                <th>Priority</th>
+                <th>Phase</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="14"></td>
+                <td><strong>R14</strong></td>
+                <td>Autonomous Action Chaining</td>
+                <td>Chain multiple steps autonomously (detect → classify → redact → export)</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Chain: read → detect → classify → anonymize → output</li>
+                            <li>Report intermediate progress</li>
+                            <li>Offer follow-up actions after scan</li>
+                            <li>Full chain: detect → severity → remediation → redact → export</li>
+                            <li>Ask confirmation before destructive actions</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="15"></td>
+                <td><strong>R15</strong></td>
+                <td>Natural Language Understanding</td>
+                <td>Understand varied ways of asking for PII scanning</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Interpret: "find PII", "scan for sensitive data", "scrub this"</li>
+                            <li>Extract params: file paths, time ranges, profile hints</li>
+                            <li>Ask clarifying questions for ambiguity</li>
+                            <li>Support follow-up references ("do the same for this file")</li>
+                            <li>Raw text without instructions → scan for PII</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="16"></td>
+                <td><strong>R16</strong></td>
+                <td>Error Handling & Recovery</td>
+                <td>Handle errors gracefully with plain language explanations</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Explain tool failures in conversational language</li>
+                            <li>Guide on missing AWS credentials</li>
+                            <li>Explain file read errors with suggestions</li>
+                            <li>Never expose stack traces to user</li>
+                            <li>Reset to IDLE on unrecoverable errors</li>
+                            <li>Maintain conversation continuity after errors</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Category: Technical Implementation -->
+<div class="category-section">
+    <div class="category-header">
+        <h2>⚙️ Technical Implementation</h2>
+        <span class="category-badge badge-mvp">MVP</span>
+        <span class="category-badge badge-count">3 requirements</span>
+    </div>
+    <table class="req-table">
+        <thead>
+            <tr>
+                <th class="checkbox-cell">Done</th>
+                <th>ID</th>
+                <th>Requirement</th>
+                <th>User Story</th>
+                <th>Priority</th>
+                <th>Phase</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="17"></td>
+                <td><strong>R17</strong></td>
+                <td>Environment & API Key Management</td>
+                <td>Load API keys securely from .env</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Load OpenAI key from .env via python-dotenv</li>
+                            <li>Fail to start if OpenAI key missing</li>
+                            <li>Load AWS creds from env/credential chain</li>
+                            <li>Never expose keys in logs/UI/chat</li>
+                            <li>Never commit keys to source control</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="18"></td>
+                <td><strong>R18</strong></td>
+                <td>LangGraph Agent Construction</td>
+                <td>Build agent using LangGraph with StateGraph</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>LangGraph StateGraph for execution flow</li>
+                            <li>ChatOpenAI (gpt-4o, temp=0) as brain</li>
+                            <li>@tool decorator with descriptions/schemas</li>
+                            <li>State channels: messages, agent state, working memory</li>
+                            <li>LCEL pipe operator for sub-chains</li>
+                            <li>Max iterations to prevent infinite loops</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="26"></td>
+                <td><strong>R26</strong></td>
+                <td>Normalized Event Model</td>
+                <td>Common representation across all source tools</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Normalized_Event: source_type, timestamp, metadata, content, raw_content</li>
+                            <li>Metadata separate from detection-target content</li>
+                            <li>Detection tools operate on Normalized_Event only</li>
+                            <li>New source tools don't modify detection logic</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Category: Industry Profiles -->
+<div class="category-section">
+    <div class="category-header">
+        <h2>🏢 Industry Profiles & Detection</h2>
+        <span class="category-badge badge-mvp">MVP</span>
+        <span class="category-badge badge-count">7 requirements</span>
+    </div>
+    <table class="req-table">
+        <thead>
+            <tr>
+                <th class="checkbox-cell">Done</th>
+                <th>ID</th>
+                <th>Requirement</th>
+                <th>User Story</th>
+                <th>Priority</th>
+                <th>Phase</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="19"></td>
+                <td><strong>R19</strong></td>
+                <td>Scrubbing Profile Capabilities</td>
+                <td>Apply right detection rules for user's domain</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>12 profiles: DEFAULT_PII, HEALTHCARE, FINANCIAL, PCI, etc.</li>
+                            <li>Default to DEFAULT_PII when unspecified</li>
+                            <li>Suggest profile from domain context</li>
+                            <li>Explain profiles on request</li>
+                            <li>Support multiple simultaneous profiles</li>
+                            <li>All inherit BASE_SECURITY + DEFAULT_PII</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="20"></td>
+                <td><strong>R20</strong></td>
+                <td>Base Security Detection</td>
+                <td>Always detect credentials regardless of profile</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Detect 15+ credential types (passwords, API keys, tokens, etc.)</li>
+                            <li>Default to REDACT or BLOCK</li>
+                            <li>Cannot be reduced by industry profiles</li>
+                            <li>Always applied before other detection</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="21"></td>
+                <td><strong>R21</strong></td>
+                <td>Healthcare Profile</td>
+                <td>Detect medical info beyond ordinary PII (HIPAA)</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>18 healthcare-specific categories (MRN, diagnosis, medication, etc.)</li>
+                            <li>Rules: BASE_SECURITY + DEFAULT_PII + HEALTHCARE_SPECIFIC</li>
+                            <li>Configurable per-entity Scrub_Actions</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="22"></td>
+                <td><strong>R22</strong></td>
+                <td>Financial Profile</td>
+                <td>Detect financial identifiers (banking data)</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>14 financial entity types (routing, IBAN, SWIFT, loans, etc.)</li>
+                            <li>Rules: BASE_SECURITY + DEFAULT_PII + FINANCIAL_SPECIFIC</li>
+                            <li>Configurable per-entity actions</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="23"></td>
+                <td><strong>R23</strong></td>
+                <td>Payment Card / PCI Profile</td>
+                <td>Strict handling of payment card data</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Detect: PAN, CVV, PIN, expiry, track data, cardholder name</li>
+                            <li>CVV/PIN/TRACK → REDACT or BLOCK</li>
+                            <li>PAN → MASK or TOKENIZE</li>
+                            <li>Never store CVV/PIN as reversible tokens</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="24"></td>
+                <td><strong>R24</strong></td>
+                <td>AI / SaaS Profile</td>
+                <td>Detect platform credentials & content leakage in AI pipelines</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Inspect: API creds, model tokens, DB creds, system prompts, agent memory, tool payloads, customer docs, source code</li>
+                            <li>Always applies Base_Security</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="25"></td>
+                <td><strong>R25</strong></td>
+                <td>Profile Configuration as Data</td>
+                <td>Profiles in YAML config, not hard-coded</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>YAML configuration files</li>
+                            <li>Version-controlled, reviewable, testable</li>
+                            <li>Support custom profiles with inheritance</li>
+                            <li>Version identifier per profile</li>
+                            <li>New profiles without core code changes</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Category: Processing & Results -->
+<div class="category-section">
+    <div class="category-header">
+        <h2>📊 Processing & Results</h2>
+        <span class="category-badge badge-mvp">MVP</span>
+        <span class="category-badge badge-count">4 requirements</span>
+    </div>
+    <table class="req-table">
+        <thead>
+            <tr>
+                <th class="checkbox-cell">Done</th>
+                <th>ID</th>
+                <th>Requirement</th>
+                <th>User Story</th>
+                <th>Priority</th>
+                <th>Phase</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="27"></td>
+                <td><strong>R27</strong></td>
+                <td>Large File & Streaming</td>
+                <td>Handle large log files without memory issues</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Buffered streaming, no full-file memory load</li>
+                            <li>Configurable file-size limits</li>
+                            <li>Preserve output ordering</li>
+                            <li>Maintain original structure</li>
+                            <li>No sensitive content in error messages</li>
+                            <li>Progress reporting during processing</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="28"></td>
+                <td><strong>R28</strong></td>
+                <td>Entity Reconciliation</td>
+                <td>Combine multi-tool results without duplicates</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Reconcile Presidio + SpaCy + contextual detections</li>
+                            <li>Identify overlapping entities by position</li>
+                            <li>Normalize entity names across tools</li>
+                            <li>Pick better classification on overlap</li>
+                            <li>Retain confidence & source metadata</li>
+                            <li>Each entity: type, start, end, confidence, detected_by</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="29"></td>
+                <td><strong>R29</strong></td>
+                <td>Result Presentation & Export</td>
+                <td>Present findings clearly and offer export options</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Summary: total count, breakdown by type, severity</li>
+                            <li>Display entities with type, text, confidence, source</li>
+                            <li>Export: scrubbed text, JSON report, inline</li>
+                            <li>Color-coded severity indicators</li>
+                            <li>Offer follow-up actions</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="30"></td>
+                <td><strong>R30</strong></td>
+                <td>Confidence Threshold Config</td>
+                <td>Configure detection sensitivity via natural language</td>
+                <td><span class="priority-low">Low</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Accept via NL: "be more strict", "use threshold 0.7"</li>
+                            <li>Default to 0.4</li>
+                            <li>Explain trade-off on request</li>
+                            <li>Remember preference in session</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Category: Security & Safety -->
+<div class="category-section">
+    <div class="category-header">
+        <h2>🔒 Security & Safety</h2>
+        <span class="category-badge badge-mvp">MVP</span>
+        <span class="category-badge badge-count">5 requirements</span>
+    </div>
+    <table class="req-table">
+        <thead>
+            <tr>
+                <th class="checkbox-cell">Done</th>
+                <th>ID</th>
+                <th>Requirement</th>
+                <th>User Story</th>
+                <th>Priority</th>
+                <th>Phase</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="31"></td>
+                <td><strong>R31</strong></td>
+                <td>Safe LLM Tool Usage</td>
+                <td>Don't send raw secrets through LLM calls unnecessarily</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Don't send raw API keys/passwords to LLM for classification</li>
+                            <li>Redact secrets before including in reasoning prompts</li>
+                            <li>Max content size per reasoning step</li>
+                            <li>PCI profiles minimize LLM exposure</li>
+                            <li>Log LLM metadata without sensitive content</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="32"></td>
+                <td><strong>R32</strong></td>
+                <td>Tokenization Capability</td>
+                <td>Reversible tokenization with secure vault</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>TOKENIZE Scrub_Action supported</li>
+                            <li>Surrogate identifiers, non-revealing</li>
+                            <li>Token_Vault requires authorization for detokenization</li>
+                            <li>Vault access audited</li>
+                            <li>No CVV/PIN tokenization</li>
+                            <li>CSPRNG for token generation</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="33"></td>
+                <td><strong>R33</strong></td>
+                <td>Adversarial Evasion Resistance</td>
+                <td>Resilient to obfuscation (Unicode, encoding tricks)</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-2">Phase 2</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Normalize Unicode homoglyphs</li>
+                            <li>Handle zero-width characters</li>
+                            <li>Detect Base64-encoded values</li>
+                            <li>Detect hex-encoded values</li>
+                            <li>Normalize before pattern matching</li>
+                            <li>Flag adversarial patterns for user</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="34"></td>
+                <td><strong>R34</strong></td>
+                <td>Rate Limiting & Cost Controls</td>
+                <td>Control resource usage and LLM costs</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Max file size limits</li>
+                            <li>Max text length limits</li>
+                            <li>Max reasoning iterations per request</li>
+                            <li>LLM token budget per session</li>
+                            <li>Conversational explanation + alternatives on limit exceed</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="35"></td>
+                <td><strong>R35</strong></td>
+                <td>Data Protection During Processing</td>
+                <td>Protect sensitive data during agent processing</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>TLS 1.2+ for external services</li>
+                            <li>Restricted temp directory</li>
+                            <li>Delete temp artifacts on complete/fail</li>
+                            <li>No unsanitized content in debug logs</li>
+                            <li>No raw sensitive content in persisted chat</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Category: Operational & Compliance -->
+<div class="category-section">
+    <div class="category-header">
+        <h2>📋 Operational & Compliance</h2>
+        <span class="category-badge badge-count">7 requirements</span>
+    </div>
+    <table class="req-table">
+        <thead>
+            <tr>
+                <th class="checkbox-cell">Done</th>
+                <th>ID</th>
+                <th>Requirement</th>
+                <th>User Story</th>
+                <th>Priority</th>
+                <th>Phase</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="36"></td>
+                <td><strong>R36</strong></td>
+                <td>Observability & Health</td>
+                <td>Visibility into agent's operational health</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Health status: Presidio, spaCy, LLM, source tools</li>
+                            <li>Report degraded detection (spaCy fail)</li>
+                            <li>Continue with partial coverage on recognizer fail</li>
+                            <li>Structured JSON logs without sensitive content</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="37"></td>
+                <td><strong>R37</strong></td>
+                <td>MVP Scope Definition</td>
+                <td>Clear MVP boundary for first release</td>
+                <td><span class="priority-high">High</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Conversational agent with ReAct loop via LangGraph</li>
+                            <li>7 tools: Presidio, SpaCy, File, CloudWatch, EventLog, Anonymizer, ProfileResolver</li>
+                            <li>6 profiles: BASE_SECURITY, DEFAULT_PII, HEALTHCARE, FINANCIAL, PCI, AI_SAAS</li>
+                            <li>5 actions: REPLACE, MASK, HASH, TOKENIZE, REDACT</li>
+                            <li>Streamlit Chat UI with state indicators</li>
+                            <li>Session Memory</li>
+                            <li>Phase 2: Linux/K8s sources, more profiles, batch, REST API</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="38"></td>
+                <td><strong>R38</strong></td>
+                <td>International PII & Locale</td>
+                <td>Extend detection beyond US-centric patterns</td>
+                <td><span class="priority-low">Low</span></td>
+                <td><span class="phase-badge phase-2">Phase 2</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Configurable locale/language</li>
+                            <li>Support locale-specific recognizers</li>
+                            <li>Apply from user context ("this is UK data")</li>
+                            <li>Don't assume US formatting</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="39"></td>
+                <td><strong>R39</strong></td>
+                <td>False Positive Management</td>
+                <td>Tell agent a detection is false positive, session allowlist</td>
+                <td><span class="priority-low">Low</span></td>
+                <td><span class="phase-badge phase-2">Phase 2</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Accept feedback: "that's not PII", "ignore that"</li>
+                            <li>Session-scoped allowlist</li>
+                            <li>Exclude allowlisted values in future scans</li>
+                            <li>Confirm additions to user</li>
+                            <li>Scoped to session + profile</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="40"></td>
+                <td><strong>R40</strong></td>
+                <td>Destination-Aware Policy</td>
+                <td>Consider where data is going when deciding scrub level</td>
+                <td><span class="priority-low">Low</span></td>
+                <td><span class="phase-badge phase-2">Phase 2</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Support destinations: INTERNAL_SIEM, EXTERNAL_ANALYTICS, EXTERNAL_LLM, FILE, S3</li>
+                            <li>Less restrictive for internal SIEM</li>
+                            <li>More restrictive for external destinations</li>
+                            <li>Ask about destination when ambiguous</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="41"></td>
+                <td><strong>R41</strong></td>
+                <td>Audit Trail</td>
+                <td>Record processing activity for compliance</td>
+                <td><span class="priority-medium">Medium</span></td>
+                <td><span class="phase-badge phase-mvp">MVP</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Record: timestamp, source, profile, counts, actions, status</li>
+                            <li>No sensitive values in audit records</li>
+                            <li>Export audit on request</li>
+                            <li>Unique request ID per action</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="checkbox-cell"><input type="checkbox" class="custom-checkbox" data-req="42"></td>
+                <td><strong>R42</strong></td>
+                <td>Compliance Framework Awareness</td>
+                <td>Explain profile-to-regulation mapping on request</td>
+                <td><span class="priority-low">Low</span></td>
+                <td><span class="phase-badge phase-2">Phase 2</span></td>
+                <td><span class="status-badge status-not-started">Not Started</span></td>
+                <td><span class="ac-toggle" onclick="toggleAC(this)">Show AC</span>
+                    <div class="ac-details">
+                        <ol>
+                            <li>Explain HEALTHCARE vs HIPAA Safe Harbor</li>
+                            <li>Explain PCI profile vs PCI-DSS</li>
+                            <li>Document known limitations</li>
+                            <li>Never claim full regulatory compliance</li>
+                        </ol>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+    <p><strong>PII Scrubbing Agent</strong> — AI Development Lifecycle (AIDLC)</p>
+    <p>Tech Stack: Python · LangGraph · LangChain LCEL · GPT-4o · Streamlit · Presidio · spaCy</p>
+    <p>Generated: August 16, 2026 | Current Stage: <strong style="color: var(--primary);">Requirements ✓ → Design ✓ → Review ✓ → Tasks ✓ → Implementation</strong></p>
+</div>
+
+<script>
+    // Toggle Acceptance Criteria
+    function toggleAC(el) {
+        const details = el.nextElementSibling;
+        details.classList.toggle('show');
+        el.textContent = details.classList.contains('show') ? 'Hide AC' : 'Show AC';
+    }
+
+    // Track checkbox state and update progress
+    function updateProgress() {
+        const checkboxes = document.querySelectorAll('.custom-checkbox');
+        const total = checkboxes.length;
+        let completed = 0;
+
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                completed++;
+                cb.closest('tr').querySelector('.status-badge').className = 'status-badge status-done';
+                cb.closest('tr').querySelector('.status-badge').textContent = 'Done';
+            } else {
+                cb.closest('tr').querySelector('.status-badge').className = 'status-badge status-not-started';
+                cb.closest('tr').querySelector('.status-badge').textContent = 'Not Started';
+            }
+        });
+
+        const percent = Math.round((completed / total) * 100);
+        document.getElementById('completed-count').textContent = completed;
+        document.getElementById('progress-percent').textContent = percent + '%';
+        document.getElementById('progress-fill').style.width = percent + '%';
+
+        // Save state to localStorage
+        const state = {};
+        checkboxes.forEach(cb => {
+            state[cb.dataset.req] = cb.checked;
+        });
+        localStorage.setItem('pii-agent-requirements', JSON.stringify(state));
+    }
+
+    // Load saved state
+    function loadState() {
+        const saved = localStorage.getItem('pii-agent-requirements');
+        if (saved) {
+            const state = JSON.parse(saved);
+            document.querySelectorAll('.custom-checkbox').forEach(cb => {
+                if (state[cb.dataset.req]) {
+                    cb.checked = true;
+                }
+            });
+        }
+        updateProgress();
+    }
+
+    // Attach event listeners
+    document.querySelectorAll('.custom-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateProgress);
+    });
+
+    // Initialize
+    loadState();
+</script>
+
+</body>
+</html>

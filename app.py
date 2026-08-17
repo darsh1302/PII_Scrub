@@ -1,0 +1,305 @@
+"""PII Scrubbing Agent — Streamlit chat interface.
+
+Requirements 3, 4, 29, 36, 39, 44.
+
+Deployment note (guardrail G10): this app reads the local filesystem and cloud
+logs using the host's credentials and has no authentication of its own. Startup
+refuses a non-loopback bind unless PII_AGENT_ALLOW_REMOTE is explicitly set, and
+that should only be done behind an authenticating reverse proxy.
+
+Run with:
+    streamlit run app.py
+"""
+
+from __future__ import annotations
+
+import streamlit as st
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+
+from agent.graph import AgentRuntime
+from agent.memory import SessionMemory, prepare_for_model
+from agent.state import initial_state
+from core.file_source import load_upload
+from models.enums import AgentStateEnum
+from session.context import get_session_context
+from ui.health import collect_health, overall_status, scrubbing_blockers
+from ui.presenters import format_state
+from utils.config import load_settings
+from utils.content_gate import sanitize_error
+from utils.paths import PathRefused
+from utils.startup import validate_startup
+
+st.set_page_config(
+    page_title="PII Scrubbing Agent",
+    page_icon="🛡️",
+    layout="wide",
+)
+
+
+# ---------------------------------------------------------------------------
+# Startup gate
+# ---------------------------------------------------------------------------
+@st.cache_resource
+def _startup():
+    """Validate once per process. Cached because it sweeps temp dirs."""
+    settings = load_settings()
+    return settings, validate_startup(settings)
+
+
+settings, report = _startup()
+
+if not report.ok:
+    st.title("🛡️ PII Scrubbing Agent")
+    st.error("This app will not start with the current configuration.")
+    st.code(report.summary(), language="text")
+    st.caption(
+        "These checks exist because the app reads local files and cloud logs "
+        "with the host's credentials. Fix the items above and reload."
+    )
+    st.stop()
+
+
+# ---------------------------------------------------------------------------
+# Session wiring
+# ---------------------------------------------------------------------------
+def _session_id() -> str:
+    """Stable per-browser-session id.
+
+    Streamlit reruns the script on every interaction, so this must come from
+    session_state rather than being regenerated.
+    """
+    if "session_id" not in st.session_state:
+        import uuid
+
+        st.session_state.session_id = f"ui-{uuid.uuid4().hex[:12]}"
+    return st.session_state.session_id
+
+
+session = get_session_context(_session_id(), settings)
+
+if "memory" not in st.session_state:
+    st.session_state.memory = SessionMemory()
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "agent_state" not in st.session_state:
+    st.session_state.agent_state = AgentStateEnum.IDLE.value
+# Results are held on the SessionContext, not in session_state — the artifact
+# must not pass through the model, and the tool that produces it has the session.
+if "uploaded_names" not in st.session_state:
+    st.session_state.uploaded_names = set()
+
+
+@st.cache_resource
+def _runtime_for(session_id: str) -> AgentRuntime:
+    """One runtime per session. Cached on the id, not shared globally."""
+    return AgentRuntime(get_session_context(session_id, load_settings()))
+
+
+runtime = _runtime_for(_session_id())
+
+
+# ---------------------------------------------------------------------------
+# Sidebar
+# ---------------------------------------------------------------------------
+with st.sidebar:
+    st.markdown("### 🛡️ PII Scrubbing Agent")
+    st.caption(format_state(st.session_state.agent_state))
+
+    st.divider()
+    st.markdown("**Session preferences**")
+
+    prefs = session.preferences
+    st.text(f"Profile:     {prefs.get('profile', 'DEFAULT_PII')}")
+    st.text(f"Destination: {prefs.get('destination') or 'not set'}")
+    st.text(f"Threshold:   {prefs.get('confidence_threshold')}")
+    st.caption("Ask in chat to change any of these.")
+
+    st.divider()
+    st.markdown("**Scanned this session**")
+    memory: SessionMemory = st.session_state.memory
+    if memory.scanned:
+        for source in memory.scanned[-8:]:
+            mark = "✅" if source.sanitized_handle else "•"
+            st.text(f"{mark} {source.label} ({source.entity_count})")
+    else:
+        st.caption("Nothing yet.")
+
+    st.divider()
+    with st.expander("Component health"):
+        probe = st.checkbox(
+            "Include a live LLM check",
+            value=False,
+            help=(
+                "Costs one token. Without it we can only confirm a key is "
+                "present, not that the account can serve requests."
+            ),
+        )
+        components = collect_health(settings, probe_llm=probe)
+        st.markdown(f"**Overall:** {overall_status(components).icon}")
+        for component in components:
+            st.markdown(f"{component.status.icon} **{component.name}**")
+            if component.detail:
+                st.caption(component.detail)
+
+        blockers = scrubbing_blockers(components)
+        if blockers:
+            st.warning(
+                "Cleaned copies cannot be produced while these are unavailable: "
+                + ", ".join(b.name for b in blockers)
+            )
+
+    st.divider()
+    with st.expander("Audit trail"):
+        st.caption(f"{session.audit_sink.count()} record(s) on disk")
+        ok, bad = session.audit_sink.verify_chain()
+        if ok:
+            st.success("Hash chain intact")
+        else:
+            st.error(f"Chain broken at request {bad}")
+        st.download_button(
+            "Export audit trail",
+            data=session.audit_sink.export() or "(empty)",
+            file_name="audit-trail.jsonl",
+            mime="application/x-ndjson",
+            use_container_width=True,
+        )
+
+    st.divider()
+    if st.button("Reset session", use_container_width=True):
+        from session.context import drop_session_context
+
+        drop_session_context(_session_id())
+        # Session results are dropped by drop_session_context -> teardown().
+        for key in (
+            "messages",
+            "memory",
+            "session_id",
+            "uploaded_names",
+        ):
+            st.session_state.pop(key, None)
+        st.cache_resource.clear()
+        st.rerun()
+
+
+# ---------------------------------------------------------------------------
+# Header
+# ---------------------------------------------------------------------------
+st.title("🛡️ PII Scrubbing Agent")
+st.caption(
+    "Ask me to scan a file or some text for sensitive data. I will tell you what "
+    "is there before changing anything."
+)
+
+if report.warnings:
+    with st.expander(f"⚠️ {len(report.warnings)} startup warning(s)"):
+        for warning in report.warnings:
+            st.caption(warning)
+
+
+# ---------------------------------------------------------------------------
+# Upload
+# ---------------------------------------------------------------------------
+upload = st.file_uploader(
+    "Upload a file to scan",
+    type=["txt", "log", "json", "jsonl", "csv", "xml"],
+    help=(
+        "Held in memory, not written to disk. Uploads bypass the scan-root "
+        "allowlist because you supplied the bytes directly."
+    ),
+)
+
+if upload is not None and upload.name not in st.session_state.uploaded_names:
+    try:
+        loaded = load_upload(upload.getvalue(), upload.name, session)
+    except PathRefused as exc:
+        st.error(sanitize_error(exc))
+    else:
+        st.session_state.uploaded_names.add(upload.name)
+        st.session_state.memory.remember_source(
+            loaded.handle, loaded.display_name, loaded.source_type.value
+        )
+        st.success(
+            f"Loaded **{loaded.display_name}** "
+            f"({loaded.bytes_total:,} bytes, {loaded.line_count:,} lines). "
+            f"Ask me to scan it."
+        )
+        for warning in loaded.warnings:
+            st.caption(f"⚠️ {warning}")
+
+
+# ---------------------------------------------------------------------------
+# Transcript
+# ---------------------------------------------------------------------------
+for message in st.session_state.messages:
+    if isinstance(message, ToolMessage):
+        continue  # tool traffic belongs in the details expander, not the chat
+    role = "user" if isinstance(message, HumanMessage) else "assistant"
+    with st.chat_message(role):
+        st.markdown(message.content)
+
+
+# ---------------------------------------------------------------------------
+# Chat turn
+# ---------------------------------------------------------------------------
+def _render_results() -> None:
+    """Render every result produced this session.
+
+    Read from the SessionContext rather than st.session_state: the result is
+    produced inside a tool, and the artifact must not travel through the model.
+    Rendered on every rerun, because Streamlit discards widgets from previous
+    runs — a download button drawn only on the turn that produced it would
+    disappear the moment the user clicked anything else.
+    """
+    from ui.streamlit_render import render_result
+
+    for result in session.results():
+        render_result(result, session)
+
+
+_render_results()
+
+
+prompt = st.chat_input("e.g. scan sample_log.txt and give me a clean copy")
+
+if prompt:
+    st.session_state.messages.append(HumanMessage(content=prompt))
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        status = st.empty()
+        body = st.empty()
+
+        state = initial_state(_session_id())
+        state["messages"] = prepare_for_model(st.session_state.messages)
+        state["session_preferences"] = dict(session.preferences)
+
+        final_text = ""
+        try:
+            for update in runtime.stream(state):
+                for node_output in update.values():
+                    if not isinstance(node_output, dict):
+                        continue
+
+                    if node_output.get("agent_state"):
+                        st.session_state.agent_state = node_output["agent_state"]
+                        status.caption(format_state(node_output["agent_state"]))
+
+                    for message in node_output.get("messages", []) or []:
+                        if isinstance(message, AIMessage) and message.content:
+                            final_text = str(message.content)
+                            body.markdown(final_text)
+        except Exception as exc:
+            final_text = (
+                "Something went wrong handling that request: "
+                f"{sanitize_error(exc)}"
+            )
+            body.markdown(final_text)
+
+        status.empty()
+        st.session_state.agent_state = AgentStateEnum.IDLE.value
+
+        if final_text:
+            st.session_state.messages.append(AIMessage(content=final_text))
+
+    st.rerun()

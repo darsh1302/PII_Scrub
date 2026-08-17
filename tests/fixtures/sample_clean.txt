@@ -1,0 +1,7 @@
+2026-08-16T09:14:22Z INFO  cache warm complete entries=48210
+2026-08-16T09:14:23Z INFO  gc pause 12ms heap=512MB
+2026-08-16T09:14:24Z INFO  queue depth 0 workers=8 idle=8
+2026-08-16T09:14:25Z DEBUG feature flag rollout_v3 enabled=false
+2026-08-16T09:14:26Z INFO  compaction finished segments=12 reclaimed=88MB
+2026-08-16T09:14:27Z INFO  scheduler tick interval=30s drift=2ms
+2026-08-16T09:14:28Z INFO  index rebuild complete shards=4

@@ -1,0 +1,50 @@
+# Secrets — never commit
+.env
+*.pem
+*.pfx
+*.p12
+*.key
+credentials
+*_secret*
+
+# Audit trail references scanned sources
+audit/
+
+# Scan workspace holds real logs at runtime. The directory is published empty.
+scan_workspace/*
+!scan_workspace/.gitkeep
+
+# Generated sample data. sample.txt is committed as a small fixture; the large
+# ones are reproducible from tools_dev/make_big_sample.py, so they are not.
+sample_large.txt
+large.txt
+sample_bigger.txt
+*-cleaned.txt
+*-findings.json
+
+# Python
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.hypothesis/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# Temp artifacts from the session temp-dir sweep
+pii_agent_*/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
