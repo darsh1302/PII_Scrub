@@ -140,7 +140,37 @@ denied. That is the ratchet.
 |---|---|
 | `BASE_SECURITY` | Built. Credentials and secrets. Inherited by everything, always applied. |
 | `DEFAULT_PII` | Built. Baseline personal identifiers. Applied when no profile is named. |
-| `HEALTHCARE`, `FINANCIAL`, `PAYMENT_PCI`, `RETAIL`, `EDUCATION`, `HR_PAYROLL`, `LEGAL`, `GOVERNMENT`, `TELECOM`, `AUTOMOTIVE`, `AI_SAAS` | Specified in requirements, not yet built (Phase 8) |
+| `PAYMENT_PCI` | Built. Card data tokenized, authentication data removed, track data blocks the artifact. |
+| `FINANCIAL` | Built. Account identifiers tokenized to keep records correlatable; scores, tax ids and wire details removed. |
+| `HEALTHCARE`, `RETAIL`, `EDUCATION`, `HR_PAYROLL`, `LEGAL`, `GOVERNMENT`, `TELECOM`, `AUTOMOTIVE`, `AI_SAAS` | Specified in requirements, not yet built |
+
+### PAYMENT_PCI
+
+PCI-DSS separates two categories and the profile follows that split. Cardholder
+data may be stored if rendered unreadable, so the PAN is `TOKENIZE` — unreadable,
+but the same card is still recognisable across records, which is what makes a
+payment log usable for reconciliation. Sensitive authentication data must never be
+retained, so CVV and PIN are `REDACT` and can never be tokenized. Full track data
+is `BLOCK`: no cleaned copy is produced at all, because a redacted copy would
+still evidence that stripe data was written somewhere it should not have been.
+
+### FINANCIAL
+
+Account identifiers are `TOKENIZE` rather than `REDACT`, because fraud and dispute
+work depends on telling whether two records concern the same account. Redacting
+every account number yields a file that is safe and useless.
+
+Routing numbers and SWIFT codes are `MASK`, not tokenized: they identify an
+institution rather than a customer, and there are few enough in circulation that a
+per-value token would be re-identifiable by frequency — a token would imply
+protection it cannot deliver. Credit scores are `REDACT`, since nobody joins on a
+score, so a correlatable form buys nothing.
+
+New entity types behind these: `ROUTING_NUMBER` (ABA checksum enforced),
+`SWIFT_CODE`, `CVV`, `PIN`, `TRACK_DATA`, `CARD_EXPIRY`, `FINANCIAL_ACCOUNT`,
+`TAX_IDENTIFIER`, `CREDIT_SCORE`, `WIRE_INSTRUCTIONS`. Every low-entropy numeric
+type requires an adjacent field label — matching three bare digits as a CVV would
+flag every HTTP status and port number in a log.
 
 Every industry profile resolves to `BASE_SECURITY + DEFAULT_PII + domain-specific`
 rules. Naming an unbuilt profile fails at profile resolution rather than silently

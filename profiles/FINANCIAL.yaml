@@ -1,0 +1,214 @@
+# FINANCIAL — banking and financial services.
+#
+# Task 9.2. Requirement 22.
+#
+# The organising idea: account identifiers are TOKENIZE rather than REDACT.
+# Financial investigation work — reconciliation, fraud analysis, dispute
+# handling — depends on being able to tell whether two records concern the same
+# account. Redacting every account number produces a file that is safe and
+# useless. A stable token keeps the join and removes the value.
+#
+# Where correlation buys nothing, the action is stricter. A credit score is not
+# an identifier and nobody joins on it, so it is simply removed.
+#
+# TOKENIZE is reversible out-of-band by an operator only. The agent has no
+# detokenize capability and the registry refuses to build one.
+
+name: FINANCIAL
+version: "1.0.0"
+description: >
+  Banking and financial services. Account identifiers are tokenized so records
+  stay correlatable for reconciliation and fraud work; scores, tax identifiers
+  and wire details are removed. Assists with detection; does not certify
+  compliance with GLBA, SOX or PCI-DSS.
+
+inherits:
+  - BASE_SECURITY
+  - DEFAULT_PII
+
+required_detectors:
+  - presidio
+  - custom_security
+  - spacy
+
+entities:
+  # --- Account identifiers: tokenize to preserve the join -----------------
+  - type: US_BANK_NUMBER
+    enabled: true
+    action: TOKENIZE
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 24
+    description: "Bank account number"
+
+  - type: IBAN_CODE
+    enabled: true
+    action: TOKENIZE
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 42
+    description: "International Bank Account Number"
+
+  # MASK, not TOKENIZE. A routing number identifies an institution rather than a
+  # customer, and there are only a few thousand in use — a per-value token would
+  # be trivially re-identifiable by frequency, so a token implies protection it
+  # cannot deliver.
+  - type: ROUTING_NUMBER
+    enabled: true
+    action: MASK
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 16
+    description: "ABA routing number, checksum-validated"
+
+  # Same reasoning as routing number: a BIC names an institution, not a person.
+  - type: SWIFT_CODE
+    enabled: true
+    action: MASK
+    confidence_threshold: 0.6
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 16
+    description: "SWIFT/BIC institution code"
+
+  - type: FINANCIAL_ACCOUNT
+    enabled: true
+    action: TOKENIZE
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 48
+    description: >
+      Loan, mortgage, brokerage, investment and retirement account identifiers
+
+  - type: CREDIT_CARD
+    enabled: true
+    action: TOKENIZE
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 32
+    description: "Payment card number, Luhn-validated"
+
+  # --- Values where correlation buys nothing ------------------------------
+  - type: TAX_IDENTIFIER
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 24
+    description: "EIN, TIN and other tax identifiers"
+
+  # Not an identifier and never joined on, so there is no case for keeping a
+  # correlatable form. Also directly sensitive: a score implies a credit decision.
+  - type: CREDIT_SCORE
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.55
+    severity: LOW
+    detection_methods: [regex, context]
+    max_pattern_span: 16
+    description: "Credit score (FICO, VantageScore)"
+
+  - type: WIRE_INSTRUCTIONS
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 80
+    description: >
+      Wire transfer instructions and beneficiary details. A frequent target of
+      business email compromise, so removed rather than masked.
+
+  # --- Authentication values: never retained ------------------------------
+  - type: CVV
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.45
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 16
+    description: "Card verification value"
+
+  - type: PIN
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.45
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 20
+    description: "Card or account PIN"
+
+  - type: TRACK_DATA
+    enabled: true
+    action: BLOCK
+    confidence_threshold: 0.5
+    severity: HIGH
+    detection_methods: [regex]
+    max_pattern_span: 128
+    description: "Full magnetic-stripe data. Presence blocks any cleaned copy."
+
+  # --- Customer identity ---------------------------------------------------
+  # Stricter than DEFAULT_PII: a name beside an account identifier is a
+  # customer relationship, which is itself confidential in financial services.
+  - type: PERSON
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.55
+    severity: MEDIUM
+    detection_methods: [ner, context]
+    max_pattern_span: 128
+    description: "Customer or account-holder name"
+
+  - type: US_SSN
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.4
+    severity: MEDIUM
+    detection_methods: [regex, validation, context]
+    max_pattern_span: 16
+    description: "US Social Security Number"
+
+  # --- Operational context ------------------------------------------------
+  - type: IP_ADDRESS
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.6
+    severity: LOW
+    detection_methods: [regex, validation]
+    max_pattern_span: 48
+    description: "Client IP address"
+    destination_actions:
+      INTERNAL_SIEM: ALLOW
+      FILE: REPLACE
+      EXTERNAL_ANALYTICS: REDACT
+      EXTERNAL_LLM: REDACT
+      S3: REDACT
+
+  - type: DATE_TIME
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.7
+    severity: LOW
+    detection_methods: [regex, ner]
+    max_pattern_span: 64
+    description: "Transaction and event timestamps"
+    field_context_exempt:
+      - leading_iso_timestamp
+      - "@timestamp"
+      - ts
+      - time
+      - timestamp
+      - datetime
+      - created_at
+      - updated_at
+      - eventTime
+      - value_date
+      - settlement_date
+    destination_actions:
+      INTERNAL_SIEM: ALLOW

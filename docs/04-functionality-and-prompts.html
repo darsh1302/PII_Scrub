@@ -353,11 +353,41 @@ denied. That is the ratchet.</p>
 <td>Built. Baseline personal identifiers. Applied when no profile is named.</td>
 </tr>
 <tr>
-<td><code>HEALTHCARE</code>, <code>FINANCIAL</code>, <code>PAYMENT_PCI</code>, <code>RETAIL</code>, <code>EDUCATION</code>, <code>HR_PAYROLL</code>, <code>LEGAL</code>, <code>GOVERNMENT</code>, <code>TELECOM</code>, <code>AUTOMOTIVE</code>, <code>AI_SAAS</code></td>
-<td>Specified in requirements, not yet built (Phase 8)</td>
+<td><code>PAYMENT_PCI</code></td>
+<td>Built. Card data tokenized, authentication data removed, track data blocks the artifact.</td>
+</tr>
+<tr>
+<td><code>FINANCIAL</code></td>
+<td>Built. Account identifiers tokenized to keep records correlatable; scores, tax ids and wire details removed.</td>
+</tr>
+<tr>
+<td><code>HEALTHCARE</code>, <code>RETAIL</code>, <code>EDUCATION</code>, <code>HR_PAYROLL</code>, <code>LEGAL</code>, <code>GOVERNMENT</code>, <code>TELECOM</code>, <code>AUTOMOTIVE</code>, <code>AI_SAAS</code></td>
+<td>Specified in requirements, not yet built</td>
 </tr>
 </tbody>
 </table>
+<h3>PAYMENT_PCI</h3>
+<p>PCI-DSS separates two categories and the profile follows that split. Cardholder
+data may be stored if rendered unreadable, so the PAN is <code>TOKENIZE</code> — unreadable,
+but the same card is still recognisable across records, which is what makes a
+payment log usable for reconciliation. Sensitive authentication data must never be
+retained, so CVV and PIN are <code>REDACT</code> and can never be tokenized. Full track data
+is <code>BLOCK</code>: no cleaned copy is produced at all, because a redacted copy would
+still evidence that stripe data was written somewhere it should not have been.</p>
+<h3>FINANCIAL</h3>
+<p>Account identifiers are <code>TOKENIZE</code> rather than <code>REDACT</code>, because fraud and dispute
+work depends on telling whether two records concern the same account. Redacting
+every account number yields a file that is safe and useless.</p>
+<p>Routing numbers and SWIFT codes are <code>MASK</code>, not tokenized: they identify an
+institution rather than a customer, and there are few enough in circulation that a
+per-value token would be re-identifiable by frequency — a token would imply
+protection it cannot deliver. Credit scores are <code>REDACT</code>, since nobody joins on a
+score, so a correlatable form buys nothing.</p>
+<p>New entity types behind these: <code>ROUTING_NUMBER</code> (ABA checksum enforced),
+<code>SWIFT_CODE</code>, <code>CVV</code>, <code>PIN</code>, <code>TRACK_DATA</code>, <code>CARD_EXPIRY</code>, <code>FINANCIAL_ACCOUNT</code>,
+<code>TAX_IDENTIFIER</code>, <code>CREDIT_SCORE</code>, <code>WIRE_INSTRUCTIONS</code>. Every low-entropy numeric
+type requires an adjacent field label — matching three bare digits as a CVV would
+flag every HTTP status and port number in a log.</p>
 <p>Every industry profile resolves to <code>BASE_SECURITY + DEFAULT_PII + domain-specific</code>
 rules. Naming an unbuilt profile fails at profile resolution rather than silently
 falling back — a silent fallback would report coverage the profile did not deliver.</p>

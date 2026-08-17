@@ -142,9 +142,13 @@ actioned — not a proof the file is free of all sensitive data.
 bind unless `PII_AGENT_ALLOW_REMOTE=true`, which should only be set behind an
 authenticating reverse proxy. RBAC is Phase 2 work.
 
-**Only two profiles are built.** `BASE_SECURITY` and `DEFAULT_PII`. The nine
-industry profiles are specified but unbuilt; naming one fails rather than silently
-falling back.
+**Four profiles are built.** `BASE_SECURITY`, `DEFAULT_PII`, `PAYMENT_PCI` and
+`FINANCIAL`. The rest are specified but unbuilt; naming one fails rather than
+silently falling back. `HEALTHCARE` is deliberately not shipped — Requirement 21
+asks for diagnoses, symptoms and medications, which have no format and would need a
+clinical vocabulary. A profile that named those types without recognizers behind
+them would report full coverage while detecting nothing clinical, and coverage is
+what the fail-closed gates depend on.
 
 ## Security notes
 

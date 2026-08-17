@@ -1,0 +1,186 @@
+# PAYMENT_PCI — cardholder data environment.
+#
+# Task 9.2. Requirement 23. Guardrails G14, G19.
+#
+# PCI-DSS separates two categories, and the distinction drives every action here.
+#
+#   Cardholder data (PAN, cardholder name, expiry, service code) may be stored
+#   if it is rendered unreadable. So the PAN is TOKENIZE: unreadable, but
+#   correlation survives, which is what makes a payment log useful for
+#   reconciliation and fraud work.
+#
+#   Sensitive authentication data (CVV/CVC, PIN, full track data) must never be
+#   retained after authorisation, in any form. Those are REDACT, and TRACK_DATA
+#   is BLOCK — no cleaned copy of full magnetic-stripe data is produced at all,
+#   because a redacted copy would still evidence that the data was captured and
+#   stored where it should never have been written.
+#
+# BLOCK is not a stricter REDACT. It suppresses the artifact entirely
+# (guardrail G19), which is the correct outcome for data that must not exist.
+#
+# Note CVV and PIN cannot be set to TOKENIZE or HASH: schema validation rejects
+# HASH for low-entropy types (G14), and reversible tokenization of an
+# authentication value would defeat the prohibition on retaining it.
+
+name: PAYMENT_PCI
+version: "1.0.0"
+description: >
+  Payment card environment. Cardholder data is tokenized so it stays
+  correlatable; sensitive authentication data is removed and full track data
+  blocks the artifact. Assists with PCI-DSS scope reduction; does not certify
+  compliance.
+
+inherits:
+  - BASE_SECURITY
+  - DEFAULT_PII
+
+required_detectors:
+  - presidio
+  - custom_security
+
+entities:
+  # --- Cardholder data: render unreadable, keep correlatable ---------------
+  # TOKENIZE rather than MASK so the same card is recognisable across records.
+  # Reversal is out-of-band only; the agent has no detokenize capability.
+  - type: CREDIT_CARD
+    enabled: true
+    action: TOKENIZE
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 32
+    description: "Primary account number, Luhn-validated"
+
+  - type: PAN
+    enabled: true
+    action: TOKENIZE
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 32
+    description: "Primary account number (alias)"
+
+  # Expiry is cardholder data. On its own it identifies nobody; combined with a
+  # PAN it completes a usable card, so it is removed rather than allowed.
+  - type: CARD_EXPIRY
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.5
+    severity: LOW
+    detection_methods: [regex, context]
+    max_pattern_span: 16
+    description: "Card expiration date"
+
+  # --- Sensitive authentication data: never retained ----------------------
+  - type: CVV
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.45
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 16
+    description: "Card verification value. Must not be retained post-authorisation."
+
+  - type: PIN
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.45
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 20
+    description: "Cardholder PIN or PIN block. Must not be retained."
+
+  # BLOCK: full track data in a log is a control failure in itself. A redacted
+  # copy would still be a record of it, so no artifact is produced.
+  - type: TRACK_DATA
+    enabled: true
+    action: BLOCK
+    confidence_threshold: 0.5
+    severity: HIGH
+    detection_methods: [regex]
+    max_pattern_span: 128
+    description: >
+      Full magnetic-stripe track data. Must never be stored. Presence blocks any
+      cleaned copy.
+
+  # --- Cardholder identity ------------------------------------------------
+  # Stricter than DEFAULT_PII's REPLACE: in a card context a name plus a
+  # tokenized PAN plus an expiry narrows an individual considerably.
+  - type: PERSON
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [ner, context]
+    max_pattern_span: 128
+    description: "Cardholder name"
+
+  # --- Supporting bank identifiers ---------------------------------------
+  - type: US_BANK_NUMBER
+    enabled: true
+    action: TOKENIZE
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 24
+    description: "Bank account number"
+
+  - type: IBAN_CODE
+    enabled: true
+    action: TOKENIZE
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 42
+    description: "International Bank Account Number"
+
+  - type: ROUTING_NUMBER
+    enabled: true
+    action: MASK
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 16
+    description: "ABA routing number, checksum-validated"
+
+  # --- Operational context ------------------------------------------------
+  # Payment logs are reconciled and investigated, so transaction-time and
+  # internal IP handling follows DEFAULT_PII's destination-aware approach rather
+  # than shredding the audit trail.
+  - type: IP_ADDRESS
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.6
+    severity: LOW
+    detection_methods: [regex, validation]
+    max_pattern_span: 48
+    description: "Client or terminal IP address"
+    destination_actions:
+      INTERNAL_SIEM: ALLOW
+      FILE: REPLACE
+      EXTERNAL_ANALYTICS: REDACT
+      EXTERNAL_LLM: REDACT
+      S3: REDACT
+
+  - type: DATE_TIME
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.7
+    severity: LOW
+    detection_methods: [regex, ner]
+    max_pattern_span: 64
+    description: "Transaction timestamps"
+    field_context_exempt:
+      - leading_iso_timestamp
+      - "@timestamp"
+      - ts
+      - time
+      - timestamp
+      - datetime
+      - created_at
+      - updated_at
+      - eventTime
+      - transaction_time
+      - auth_time
+    destination_actions:
+      INTERNAL_SIEM: ALLOW

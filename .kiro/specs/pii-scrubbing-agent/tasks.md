@@ -634,7 +634,8 @@ Within a phase, sub-tasks are ordered so each is buildable and testable on the p
   - Effective rules BASE_SECURITY + DEFAULT_PII + HEALTHCARE_SPECIFIC; declare required detectors so the profile becomes unavailable rather than degraded when spaCy is missing
   - _Requirements: 21.1, 21.2, 21.3, 19.6, 36.6_
 
-- [ ] 9.2 Author `profiles/FINANCIAL.yaml`, `profiles/PAYMENT_PCI.yaml`, `profiles/AI_SAAS.yaml`
+- [x] 9.2 Author `profiles/FINANCIAL.yaml`, `profiles/PAYMENT_PCI.yaml`, `profiles/AI_SAAS.yaml`
+  - DONE: FINANCIAL and PAYMENT_PCI shipped with `core/financial_recognizers.py` (10 new entity types, ABA checksum enforced, label required for low-entropy numerics). 17 tests in `tests/security/test_financial_profiles.py`. AI_SAAS still outstanding.
   - FINANCIAL: bank account, routing number, IBAN, SWIFT/BIC, loan, mortgage, brokerage, investment, retirement account, credit score, tax identifier, wire instructions, financial-account credentials with configurable per-entity actions
   - PAYMENT_PCI: PAN (MASK or TOKENIZE), CVV/PIN/TRACK_DATA (REDACT or BLOCK), expiration, card authentication information, cardholder name; CVV and PIN never reversibly tokenized
   - AI_SAAS: platform and model/provider credentials, connection strings, internal authentication information, user prompts, confidential system-prompt content, agent memory, tool arguments and responses, retrieved customer documents, proprietary source code and customer content, with BASE_SECURITY always applied

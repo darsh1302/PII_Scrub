@@ -57,6 +57,15 @@ DEFAULT_SEVERITY: dict[str, EntitySeverity] = {
     "MEDICAL_LICENSE": EntitySeverity.MEDIUM,
     "MEDICAL_RECORD_NUMBER": EntitySeverity.MEDIUM,
     "PATIENT_IDENTIFIER": EntitySeverity.MEDIUM,
+    "ROUTING_NUMBER": EntitySeverity.MEDIUM,
+    "SWIFT_CODE": EntitySeverity.MEDIUM,
+    "FINANCIAL_ACCOUNT": EntitySeverity.MEDIUM,
+    "TAX_IDENTIFIER": EntitySeverity.MEDIUM,
+    "WIRE_INSTRUCTIONS": EntitySeverity.MEDIUM,
+    # A card expiry alone does not identify anyone; paired with a PAN it
+    # completes a usable card, and the PAN carries its own MEDIUM rating.
+    "CARD_EXPIRY": EntitySeverity.LOW,
+    "CREDIT_SCORE": EntitySeverity.LOW,
     "EMAIL_ADDRESS": EntitySeverity.MEDIUM,
     "PHONE_NUMBER": EntitySeverity.MEDIUM,
     "PERSON": EntitySeverity.MEDIUM,
@@ -72,7 +81,17 @@ DEFAULT_SEVERITY: dict[str, EntitySeverity] = {
 # Entity types backed by a checksum or structural validator. Reconciliation
 # rule 3 prefers these over unvalidated guesses.
 VALIDATOR_BACKED_TYPES = frozenset(
-    {"CREDIT_CARD", "PAN", "IBAN_CODE", "US_SSN", "JWT", "AWS_ACCESS_KEY"}
+    {
+        "CREDIT_CARD",
+        "PAN",
+        "IBAN_CODE",
+        "US_SSN",
+        "JWT",
+        "AWS_ACCESS_KEY",
+        # ABA weighted checksum, enforced in RoutingNumberRecognizer. Without it
+        # a bare nine-digit run is indistinguishable from an ordinary log id.
+        "ROUTING_NUMBER",
+    }
 )
 
 

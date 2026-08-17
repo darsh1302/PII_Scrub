@@ -75,10 +75,17 @@ def _build_analyzer():
     """Presidio analyzer with our custom security recognizers registered."""
     from presidio_analyzer import AnalyzerEngine
 
+    from core.financial_recognizers import build_financial_recognizers
     from core.recognizers import build_security_recognizers
 
     engine = AnalyzerEngine()
     for recognizer in build_security_recognizers():
+        engine.registry.add_recognizer(recognizer)
+
+    # Registered unconditionally. Detection is cheap and the active profile
+    # decides what is reported, so a DEFAULT_PII scan is unchanged by their
+    # presence — and a PAYMENT_PCI scan does not need a different engine.
+    for recognizer in build_financial_recognizers():
         engine.registry.add_recognizer(recognizer)
     return engine
 
@@ -188,9 +195,13 @@ def detect_presidio(
         ledger.record_detector_timeout(DetectorName.PRESIDIO.value)
         ledger.record_detector_timeout(DetectorName.CUSTOM_SECURITY.value)
 
+    from core.financial_recognizers import financial_entity_types
     from core.recognizers import security_entity_types
 
-    security_types = set(security_entity_types())
+    # Both sets are purpose-built recognizers rather than generic Presidio ones,
+    # so both are attributed to CUSTOM_SECURITY. That attribution drives
+    # reconciliation precedence — a targeted pattern should beat a generic guess.
+    security_types = set(security_entity_types()) | set(financial_entity_types())
     entities: list[Entity] = []
 
     for result in results:
