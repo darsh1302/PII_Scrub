@@ -21,6 +21,7 @@ are predictable and auditable.
 
 from __future__ import annotations
 
+import re
 import unicodedata
 from dataclasses import dataclass, field
 
@@ -216,6 +217,62 @@ def normalize(text: str) -> NormalizationResult:
         invisible_removed=invisible,
         homoglyphs_folded=folded,
     )
+
+
+# A run of single characters separated by single spaces or tabs, four or more
+# long: "4 8 2 - 7 1 - 9 0 5 3". Multi-character tokens are excluded by
+# construction, which is what keeps ordinary log lines out of scope — "port=443
+# id=12" has two-and-three character tokens and never matches.
+#
+# The lookarounds matter. Without the trailing one the run greedily swallows the
+# first character of the next token — "9 0 5 3 status" collapses to
+# "9053status", and the SSN pattern then fails its own word boundary, so the
+# defence silently does nothing. Without the leading one a run can start
+# mid-token.
+_SPACED_RUN = re.compile(
+    r"(?<![0-9A-Za-z\-])(?:[0-9A-Za-z\-][ \t]){3,}[0-9A-Za-z\-](?![0-9A-Za-z\-])"
+)
+
+
+def collapse_spaced_characters(text: str) -> tuple[str, IndexMap]:
+    """Remove the spacing from runs of individually-spaced characters.
+
+    Targeted rather than global. ``strip_whitespace_runs`` below removes *all*
+    whitespace, which would join adjacent fields — ``port=443 id=12`` becomes
+    ``port=443id=12`` and a nine-digit run appears that was never in the source.
+    Manufacturing an SSN out of two unrelated numbers is a worse failure than
+    missing a spaced one, because it refuses correct artifacts and destroys real
+    data.
+
+    So only runs of single characters are collapsed, which is the shape the attack
+    actually takes. Returns the rewritten text and a map from its offsets back to
+    the input's.
+    """
+    if not text:
+        return "", IndexMap(original_length=0)
+
+    matches = list(_SPACED_RUN.finditer(text))
+    if not matches:
+        return text, IndexMap(
+            positions=list(range(len(text))), original_length=len(text)
+        )
+
+    spans = {(m.start(), m.end()) for m in matches}
+    drop: set[int] = set()
+    for start, end in spans:
+        for index in range(start, end):
+            if text[index] in " \t":
+                drop.add(index)
+
+    out: list[str] = []
+    positions: list[int] = []
+    for index, char in enumerate(text):
+        if index in drop:
+            continue
+        out.append(char)
+        positions.append(index)
+
+    return "".join(out), IndexMap(positions=positions, original_length=len(text))
 
 
 def strip_whitespace_runs(text: str) -> tuple[str, IndexMap]:

@@ -223,25 +223,57 @@ def test_normalization_never_grows_the_text():
 # Written as passing assertions rather than skips. A skipped test for an
 # undefended attack is how a gap becomes permanent; a passing assertion fails
 # loudly the moment someone closes the gap, forcing a deliberate update.
-def test_gap_whitespace_insertion_defeats_detection(session):
-    """KNOWN GAP. ``4 8 2 - 7 1 - 9 0 5 3`` is not detected.
-
-    ``utils.normalization.strip_whitespace_runs`` exists for exactly this attack
-    and has offset-consistency tests, but nothing in the pipeline calls it. The
-    defence is written and unwired.
-
-    Closing it needs care: collapsing all whitespace unconditionally would join
-    adjacent fields (``port=443 id=12`` becoming ``port=443id=12``) and
-    manufacture matches. The intended design is a second pass over
-    whitespace-stripped text, restricted to validator-backed types where a
-    checksum rejects false positives.
-    """
+# ---------------------------------------------------------------------------
+# Spaced-character evasion — now defended
+# ---------------------------------------------------------------------------
+def test_spaced_ssn_is_detected(session):
+    """``4 8 2 - 7 1 - 9 0 5 3`` was undetected until the second pass existed."""
     spaced = " ".join(SSN)
-    result = _scan(session, f"ssn={spaced} status=ok\n")
-    assert "US_SSN" not in _types(result), (
-        "whitespace-insertion is now detected — good. Wire the change into the "
-        "docs and delete this test."
+    assert "US_SSN" in _types(_scan(session, f"ssn={spaced} status=ok\n"))
+
+
+def test_spaced_card_is_detected(session):
+    spaced = " ".join(CARD)
+    assert "CREDIT_CARD" in _types(_scan(session, f"card={spaced} amount=42\n"))
+
+
+def test_spaced_evasion_is_reported_as_a_signal(session):
+    spaced = " ".join(SSN)
+    result = _scan(session, f"ssn={spaced}\n")
+    assert any("spaces between characters" in w for w in result.warnings)
+
+
+def test_a_spaced_ssn_is_actually_removed_from_the_artifact(session):
+    """Offsets pass through two maps to get here, so this is the real check."""
+    spaced = " ".join(SSN)
+    cleaned, result = _scrub_text(session, f"ssn={spaced} port=443\n")
+
+    assert cleaned is not None, f"no artifact: {result.refusal}"
+    assert spaced not in cleaned
+    # Unrelated fields are untouched.
+    assert "port=443" in cleaned
+
+
+def test_adjacent_numeric_fields_are_not_joined_into_a_false_finding(session):
+    """The reason the pass is targeted rather than stripping all whitespace.
+
+    Global stripping turns ``port=443 id=12 code=482 71 9053`` into one run and
+    invents identifiers that were never in the source. Manufacturing an SSN is
+    worse than missing a spaced one: it refuses correct artifacts and destroys
+    real data.
+    """
+    content = "port=443 id=12 retries=3 code=48271 9053 status=ok\n"
+    result = _scan(session, content)
+    assert "US_SSN" not in _types(result)
+
+
+def test_ordinary_log_lines_do_not_trigger_the_second_pass(session):
+    content = (
+        "2026-03-04T08:00:00Z INFO svc=payments amount=42.00 "
+        "duration_ms=1841 status=ok\n"
     )
+    result = _scan(session, content)
+    assert not any("spaces between characters" in w for w in result.warnings)
 
 
 def test_gap_base64_encoded_values_are_not_decoded(session):
@@ -271,13 +303,13 @@ def test_gap_hex_encoded_values_are_not_decoded(session):
     )
 
 
-def test_gap_documented_evasions_are_at_least_visible_in_signals(session):
-    """The gaps above are silent — no warning tells the user.
+def test_gap_encoded_values_produce_no_warning(session):
+    """KNOWN GAP. Encoded payloads are neither decoded nor flagged.
 
-    Detection cannot catch everything, but a *signal* is cheap and this is where
-    it is missing. Recorded here so the absence is deliberate and reviewable
-    rather than forgotten.
+    Detection cannot catch everything, but a signal is cheap and this is where it
+    is missing: a base64 blob adjacent to PII-ish field names is at least worth
+    mentioning. Recorded so the absence stays deliberate and reviewable.
     """
-    spaced = " ".join(SSN)
-    result = _scan(session, f"ssn={spaced}\n")
+    encoded = base64.b64encode(SSN.encode()).decode()
+    result = _scan(session, f"ssn_b64={encoded}\n")
     assert result.warnings == []

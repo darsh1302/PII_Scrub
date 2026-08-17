@@ -665,8 +665,8 @@ Within a phase, sub-tasks are ordered so each is buildable and testable on the p
 
 - [x] 9.6 Build the adversarial test suite
   - DONE: 29 tests in `tests/security/test_adversarial_evasion.py`. Defended and proven: zero-width and bidirectional controls (7 variants), Cyrillic and Greek homoglyphs, full-width digits, lookalike dashes, combining marks, case alternation in field labels. Stacked evasions still yield a verified-clean artifact, and normalization leaves clean text byte-identical.
-  - **Known gaps, asserted as tests rather than skipped:** whitespace insertion (`4 8 2 - 7 1 - 9 0 5 3`), base64-encoded values, hex-encoded values. None produce a warning either, which is the cheaper half of the fix.
-  - `utils.normalization.strip_whitespace_runs` exists with offset tests but is **never called by the pipeline** — the whitespace defence is written and unwired.
+  - Spaced-character evasion (`4 8 2 - 7 1 - 9 0 5 3`) found undefended and **closed**: `detect_spaced_evasion` runs a second pass over `collapse_spaced_characters` output, restricted to validator-backed types so de-spacing cannot manufacture findings. Reported as an evasion signal. Changed one golden — `sample_adversarial.txt` 5 to 6 entities, the new one a spaced `US_SSN`.
+  - **Remaining gaps, asserted as tests rather than skipped:** base64-encoded and hex-encoded values are neither decoded nor flagged.
   - Homoglyph, zero-width, whitespace-insertion, case-alternation, Base64 and hex-encoded value cases; injection-pattern corpus asserting findings are reported without reproducing injected content in the audit record
   - Elevated-inspection flagging and user notification assertions
   - _Requirements: 33.1, 33.2, 33.3, 33.4, 33.5, 33.6, 43.1, 43.5, 43.7_

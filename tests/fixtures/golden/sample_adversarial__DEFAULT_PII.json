@@ -1,7 +1,7 @@
 {
   "action_counts": {
     "ALLOW": 2,
-    "REDACT": 3
+    "REDACT": 4
   },
   "coverage_percent": 100.0,
   "engine_versions": {
@@ -45,6 +45,16 @@
     },
     {
       "action": "REDACT",
+      "confidence": 0.5,
+      "detected_by": [
+        "presidio"
+      ],
+      "end": 276,
+      "start": 255,
+      "type": "US_SSN"
+    },
+    {
+      "action": "REDACT",
       "confidence": 0.85,
       "detected_by": [
         "custom_security"
@@ -67,16 +77,16 @@
   "entity_breakdown": {
     "AWS_ACCESS_KEY": 1,
     "DATE_TIME": 2,
-    "US_SSN": 2
+    "US_SSN": 3
   },
-  "entity_count": 5,
+  "entity_count": 6,
   "fixture": "sample_adversarial.txt",
   "profile": "DEFAULT_PII",
   "refusal": null,
   "severity_breakdown": {
     "HIGH": 1,
     "LOW": 2,
-    "MEDIUM": 2
+    "MEDIUM": 3
   },
   "status": "OK"
 }

@@ -250,20 +250,40 @@ combining marks and case alternation are all defeated — including a stacked at
 that still produces a verified-clean artifact, which exercises the offset map under
 normalization.
 
-Three attacks are **not** defended, asserted as passing tests so closing one fails
+**Spaced-character evasion is now defended** by `detect_spaced_evasion`, a second
+pass in `core/detector.py`. It runs only when a chunk contains a run of
+individually-spaced characters, and only for validator-backed types (`US_SSN`,
+`CREDIT_CARD`, `IBAN_CODE`, `ROUTING_NUMBER`).
+
+Both restrictions are load-bearing. De-spacing creates adjacencies that were not
+in the source, so an unvalidated pattern would invent identifiers — turning
+`port=443 id=12 code=48271 9053` into a false SSN, refusing a correct artifact and
+destroying real data. Manufacturing a finding is worse than missing a spaced one.
+
+`collapse_spaced_characters` is targeted rather than global for the same reason;
+`strip_whitespace_runs` (which removes all whitespace) is still unused and should
+stay that way. Two subtleties cost real debugging:
+
+* The run regex needs **both** lookarounds. Without the trailing
+  `(?![0-9A-Za-z\-])` the run swallows the next token's first character, so
+  `9 0 5 3 status` collapses to `9053status`, the SSN pattern fails its own word
+  boundary, and the whole defence silently does nothing while looking correct.
+* Offsets pass through **two** maps to reach source coordinates — collapse map into
+  normalized coordinates, then the normalization map into the original. Getting the
+  composition wrong places the replacement on the wrong span.
+
+Wiring it changed one golden: `sample_adversarial.txt` went from 5 to 6 entities,
+the new one being a spaced `US_SSN` at `[255:276]` resolved to `REDACT`. That
+fixture had an escaping SSN the whole time, which is a fair advertisement for the
+goldens.
+
+Two attacks remain undefended, asserted as passing tests so closing one fails
 loudly rather than being forgotten:
 
-* **Whitespace insertion** — `4 8 2 - 7 1 - 9 0 5 3` is not detected.
-  `strip_whitespace_runs` exists in `utils/normalization.py`, has offset-consistency
-  property tests, and is *never called by the pipeline*. The defence is written and
-  unwired. Closing it needs the second-pass design in its docstring, restricted to
-  validator-backed types: collapsing whitespace unconditionally would join adjacent
-  fields (`port=443 id=12` → `port=443id=12`) and manufacture matches.
 * **Base64-encoded values** — no candidate blob is decoded and re-scanned.
 * **Hex-encoded values** — same.
 
-None of the three emits a warning either, which is the cheap half of the fix and
-worth doing before the detection half.
+Neither emits a warning either, which is the cheap half of that fix.
 
 Worth keeping in perspective: these are *evasion* gaps, not accidental-disclosure
 gaps. Someone logging PII by mistake logs it in plaintext; base64 implies intent.

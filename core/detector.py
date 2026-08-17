@@ -25,7 +25,11 @@ from models.entities import Entity, severity_for
 from models.enums import ConfidenceSource, DetectorName
 from session.context import get_shared_engine
 from utils.config import SPACY_MODEL_NAME, chunk_timeout_for
-from utils.normalization import NormalizationResult, normalize
+from utils.normalization import (
+    NormalizationResult,
+    collapse_spaced_characters,
+    normalize,
+)
 
 # Presidio entity names mapped to ours where they differ.
 _PRESIDIO_ALIASES = {
@@ -478,10 +482,101 @@ def detect_chunk(
         )
     except DetectorUnavailable:
         # Already recorded in the ledger; coverage will reflect it.
-        return outcome
+        spacy_outcome = DetectionOutcome()
+
+    spaced = detect_spaced_evasion(text, normalized=normalized, threshold=threshold)
 
     return DetectionOutcome(
-        entities=[*outcome.entities, *spacy_outcome.entities],
-        evasion_signals=outcome.evasion_signals,
-        elapsed_ms=outcome.elapsed_ms + spacy_outcome.elapsed_ms,
+        entities=[
+            *outcome.entities,
+            *spacy_outcome.entities,
+            *spaced.entities,
+        ],
+        evasion_signals=[*outcome.evasion_signals, *spaced.evasion_signals],
+        elapsed_ms=outcome.elapsed_ms + spacy_outcome.elapsed_ms + spaced.elapsed_ms,
+    )
+
+
+# --------------------------------------------------------------------------
+# Spaced-character evasion
+# --------------------------------------------------------------------------
+# Types whose match is confirmed by a checksum or structural validator. The second
+# pass is restricted to these because de-spacing creates new adjacencies, and only
+# a validator can tell a real identifier from an accident of joining.
+_SPACED_PASS_TYPES = ("US_SSN", "CREDIT_CARD", "IBAN_CODE", "ROUTING_NUMBER")
+
+
+def detect_spaced_evasion(
+    text: str,
+    *,
+    normalized: NormalizationResult | None = None,
+    threshold: float = 0.0,
+) -> DetectionOutcome:
+    """Second pass for individually-spaced characters: ``4 8 2 - 7 1 - 9 0 5 3``.
+
+    Runs only when the chunk actually contains such a run, and only for
+    validator-backed types. Both restrictions exist to avoid manufacturing
+    findings: de-spacing joins characters that were not adjacent, and an
+    unvalidated pattern over new adjacencies would invent identifiers, refuse
+    correct artifacts, and destroy real data.
+
+    Offsets pass through two maps to reach original coordinates — collapse map
+    into normalized coordinates, then the normalization map into the source.
+    Getting that composition wrong would place replacements on the wrong span,
+    which is the failure this module works hardest to avoid.
+    """
+    normalized = normalized if normalized is not None else normalize(text)
+    started = time.perf_counter()
+
+    collapsed, collapse_map = collapse_spaced_characters(normalized.text)
+    if collapsed == normalized.text:
+        return DetectionOutcome(elapsed_ms=0.0)
+
+    try:
+        analyzer = get_analyzer()
+        results = analyzer.analyze(
+            text=collapsed,
+            entities=list(_SPACED_PASS_TYPES),
+            language="en",
+            score_threshold=threshold,
+        )
+    except Exception:  # pragma: no cover - engine failure already reported
+        return DetectionOutcome(elapsed_ms=(time.perf_counter() - started) * 1000)
+
+    entities: list[Entity] = []
+    for result in results:
+        # collapsed -> normalized
+        norm_start, norm_end = collapse_map.to_original(result.start, result.end)
+        # normalized -> original
+        start, end = normalized.index_map.to_original(norm_start, norm_end)
+        if end <= start:
+            continue
+
+        entity_type = _PRESIDIO_ALIASES.get(result.entity_type, result.entity_type)
+        entities.append(
+            Entity(
+                type=entity_type,
+                start=start,
+                end=end,
+                confidence=float(result.score),
+                text=text[start:end],
+                confidence_source=ConfidenceSource.CALIBRATED,
+                severity=severity_for(entity_type),
+                detected_by=[DetectorName.PRESIDIO.value],
+            )
+        )
+
+    signals: list[str] = []
+    if entities:
+        found = ", ".join(sorted({e.type for e in entities}))
+        signals.append(
+            f"{len(entities)} value(s) written with spaces between characters to "
+            f"evade pattern matching ({found}) — detected by a second pass and "
+            f"scrubbed"
+        )
+
+    return DetectionOutcome(
+        entities=entities,
+        evasion_signals=signals,
+        elapsed_ms=(time.perf_counter() - started) * 1000,
     )
