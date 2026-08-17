@@ -316,9 +316,11 @@ actioned — not a proof the file is free of all sensitive data.</p>
 <p><strong>No access control.</strong> Single-operator trust model. Startup refuses a non-loopback
 bind unless <code>PII_AGENT_ALLOW_REMOTE=true</code>, which should only be set behind an
 authenticating reverse proxy. RBAC is Phase 2 work.</p>
-<p><strong>Four profiles are built.</strong> <code>BASE_SECURITY</code>, <code>DEFAULT_PII</code>, <code>PAYMENT_PCI</code> and
-<code>FINANCIAL</code>. The rest are specified but unbuilt; naming one fails rather than
-silently falling back. <code>HEALTHCARE</code> is deliberately not shipped — Requirement 21
+<p><strong>Five profiles are built.</strong> <code>BASE_SECURITY</code>, <code>DEFAULT_PII</code>, <code>PAYMENT_PCI</code>,
+<code>FINANCIAL</code> and <code>AI_SAAS</code>. The rest are specified but unbuilt; naming one fails
+rather than silently falling back. <code>AI_SAAS</code> covers structured LLM telemetry but
+deliberately does not claim to detect proprietary source code or free-form
+customer content, which have no format. <code>HEALTHCARE</code> is deliberately not shipped — Requirement 21
 asks for diagnoses, symptoms and medications, which have no format and would need a
 clinical vocabulary. A profile that named those types without recognizers behind
 them would report full coverage while detecting nothing clinical, and coverage is

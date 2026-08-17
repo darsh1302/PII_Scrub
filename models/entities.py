@@ -46,6 +46,7 @@ DEFAULT_SEVERITY: dict[str, EntitySeverity] = {
     "CVV": EntitySeverity.HIGH,
     "PIN": EntitySeverity.HIGH,
     "TRACK_DATA": EntitySeverity.HIGH,
+    "MODEL_PROVIDER_TOKEN": EntitySeverity.HIGH,
     # MEDIUM — direct identifiers
     "US_SSN": EntitySeverity.MEDIUM,
     "CREDIT_CARD": EntitySeverity.MEDIUM,
@@ -66,6 +67,18 @@ DEFAULT_SEVERITY: dict[str, EntitySeverity] = {
     # completes a usable card, and the PAN carries its own MEDIUM rating.
     "CARD_EXPIRY": EntitySeverity.LOW,
     "CREDIT_SCORE": EntitySeverity.LOW,
+    # LLM payloads carry whatever the user typed, so their real severity is the
+    # severity of their contents. MEDIUM because a prompt log is, empirically,
+    # dense with direct identifiers — and an embedding is not opaque: inversion
+    # recovers much of the source text, so it ranks with the text it encodes.
+    "USER_PROMPT": EntitySeverity.MEDIUM,
+    "SYSTEM_PROMPT": EntitySeverity.MEDIUM,
+    "MODEL_COMPLETION": EntitySeverity.MEDIUM,
+    "AGENT_MEMORY": EntitySeverity.MEDIUM,
+    "TOOL_ARGUMENTS": EntitySeverity.MEDIUM,
+    "TOOL_RESPONSE": EntitySeverity.MEDIUM,
+    "RETRIEVED_DOCUMENT": EntitySeverity.MEDIUM,
+    "VECTOR_EMBEDDING": EntitySeverity.MEDIUM,
     "EMAIL_ADDRESS": EntitySeverity.MEDIUM,
     "PHONE_NUMBER": EntitySeverity.MEDIUM,
     "PERSON": EntitySeverity.MEDIUM,

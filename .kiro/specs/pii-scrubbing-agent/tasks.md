@@ -635,7 +635,8 @@ Within a phase, sub-tasks are ordered so each is buildable and testable on the p
   - _Requirements: 21.1, 21.2, 21.3, 19.6, 36.6_
 
 - [x] 9.2 Author `profiles/FINANCIAL.yaml`, `profiles/PAYMENT_PCI.yaml`, `profiles/AI_SAAS.yaml`
-  - DONE: FINANCIAL and PAYMENT_PCI shipped with `core/financial_recognizers.py` (10 new entity types, ABA checksum enforced, label required for low-entropy numerics). 17 tests in `tests/security/test_financial_profiles.py`. AI_SAAS still outstanding.
+  - DONE: all three shipped. `core/financial_recognizers.py` adds 10 entity types (ABA checksum enforced; label required for low-entropy numerics). `core/ai_recognizers.py` adds 9 (provider tokens, prompt/completion, agent memory, tool traffic, retrieval, embeddings). 34 tests across `tests/security/test_financial_profiles.py` and `test_ai_saas_profile.py`.
+  - NOT DELIVERED, deliberately: Requirement 24.1's proprietary source code and free-form confidential customer content. Neither has a format; a recognizer claiming them would report coverage the profile cannot deliver, and coverage is what the fail-closed gates trust. Documented in `profiles/AI_SAAS.yaml`.
   - FINANCIAL: bank account, routing number, IBAN, SWIFT/BIC, loan, mortgage, brokerage, investment, retirement account, credit score, tax identifier, wire instructions, financial-account credentials with configurable per-entity actions
   - PAYMENT_PCI: PAN (MASK or TOKENIZE), CVV/PIN/TRACK_DATA (REDACT or BLOCK), expiration, card authentication information, cardholder name; CVV and PIN never reversibly tokenized
   - AI_SAAS: platform and model/provider credentials, connection strings, internal authentication information, user prompts, confidential system-prompt content, agent memory, tool arguments and responses, retrieved customer documents, proprietary source code and customer content, with BASE_SECURITY always applied

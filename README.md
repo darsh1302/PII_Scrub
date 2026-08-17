@@ -142,9 +142,11 @@ actioned — not a proof the file is free of all sensitive data.
 bind unless `PII_AGENT_ALLOW_REMOTE=true`, which should only be set behind an
 authenticating reverse proxy. RBAC is Phase 2 work.
 
-**Four profiles are built.** `BASE_SECURITY`, `DEFAULT_PII`, `PAYMENT_PCI` and
-`FINANCIAL`. The rest are specified but unbuilt; naming one fails rather than
-silently falling back. `HEALTHCARE` is deliberately not shipped — Requirement 21
+**Five profiles are built.** `BASE_SECURITY`, `DEFAULT_PII`, `PAYMENT_PCI`,
+`FINANCIAL` and `AI_SAAS`. The rest are specified but unbuilt; naming one fails
+rather than silently falling back. `AI_SAAS` covers structured LLM telemetry but
+deliberately does not claim to detect proprietary source code or free-form
+customer content, which have no format. `HEALTHCARE` is deliberately not shipped — Requirement 21
 asks for diagnoses, symptoms and medications, which have no format and would need a
 clinical vocabulary. A profile that named those types without recognizers behind
 them would report full coverage while detecting nothing clinical, and coverage is

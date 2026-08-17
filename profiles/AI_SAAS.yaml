@@ -1,0 +1,214 @@
+# AI_SAAS — LLM application logs, traces and agent telemetry.
+#
+# Task 9.2. Requirement 24.
+#
+# The problem: an LLM application logs its own traffic. Prompts, tool arguments,
+# retrieved chunks and completions land in application logs and traces, and that
+# content is whatever the user typed — their name, a customer's account number, a
+# pasted support email. The prompt log becomes one of the most PII-dense
+# artifacts the company holds, and nobody planned for it.
+#
+# Actions are REDACT rather than REPLACE for payload fields. A payload is not an
+# identifier with a known shape; it is free text of unknown composition. Masking
+# it or labelling it in place would leave the surrounding text intact and imply
+# the contents were assessed. They were not — the field is removed because its
+# contents cannot be characterised.
+#
+# What this profile does NOT detect, and does not claim to:
+#
+#   Requirement 24.1 lists proprietary source code and free-form confidential
+#   customer content. Neither has a format. There is no recognizer for either,
+#   because a recognizer that pretended to find them would report coverage the
+#   profile cannot deliver — and coverage is precisely what the fail-closed gates
+#   trust. Use this profile for telemetry, and do not read a clean result as
+#   evidence that no proprietary content is present.
+#
+# BASE_SECURITY applies regardless (Requirement 24.2), which covers API keys,
+# database credentials, connection strings and internal authentication values.
+
+name: AI_SAAS
+version: "1.0.0"
+description: >
+  LLM application telemetry: prompts, completions, agent memory, tool traffic,
+  retrieval payloads and embeddings, plus model-provider credentials. Detects
+  structured payload fields; does not detect free-form proprietary source code or
+  customer content, which have no format.
+
+inherits:
+  - BASE_SECURITY
+  - DEFAULT_PII
+
+required_detectors:
+  - presidio
+  - custom_security
+
+entities:
+  # --- Provider credentials -----------------------------------------------
+  # BASE_SECURITY covers generic api_key assignments and OpenAI sk- keys. This
+  # adds the providers it does not name: Anthropic, HuggingFace, Replicate, Groq.
+  - type: MODEL_PROVIDER_TOKEN
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: HIGH
+    detection_methods: [regex, context]
+    max_pattern_span: 256
+    description: "Model and inference provider API credentials"
+
+  # --- Conversation payloads ----------------------------------------------
+  - type: USER_PROMPT
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 2048
+    description: >
+      User-supplied prompt text. Contents are unknown and frequently contain
+      direct identifiers.
+
+  # Not automatically confidential — many system prompts are published. Marked
+  # REPLACE so it is visible in the findings and removable, without the profile
+  # asserting that every system prompt is a secret.
+  - type: SYSTEM_PROMPT
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.55
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 2048
+    description: >
+      System-prompt content. Confidential only where designated; ask for stricter
+      handling when it encodes proprietary instructions.
+
+  - type: MODEL_COMPLETION
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 2048
+    description: >
+      Model output. Can restate identifiers from the prompt or from retrieved
+      context, so it is treated as identifying.
+
+  - type: AGENT_MEMORY
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 2048
+    description: "Conversation history, scratchpad and working memory"
+
+  # --- Tool traffic --------------------------------------------------------
+  - type: TOOL_ARGUMENTS
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 2048
+    description: >
+      Arguments passed to a tool. Commonly carry the exact identifier a user
+      asked about — an account number, an email, a record id.
+
+  - type: TOOL_RESPONSE
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 2048
+    description: >
+      Tool output. Typically a database or API result, so often the densest
+      source of customer data in an agent trace.
+
+  # --- Retrieval -----------------------------------------------------------
+  - type: RETRIEVED_DOCUMENT
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 2048
+    description: >
+      Retrieved context chunks. Content belongs to whoever owns the indexed
+      corpus, which is usually the customer.
+
+  # An embedding is not opaque. Inversion attacks recover substantial portions of
+  # the source text, so a logged vector is closer to logging the input than to
+  # logging a hash. REDACT rather than MASK: a masked vector of the right length
+  # would imply the values were protected.
+  - type: VECTOR_EMBEDDING
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.6
+    severity: MEDIUM
+    detection_methods: [regex, context]
+    max_pattern_span: 65536
+    description: >
+      Embedding vectors. Reversible enough via inversion to be treated as the
+      text they encode.
+
+  # --- Identity in prompt logs --------------------------------------------
+  # Stricter than DEFAULT_PII's REPLACE. In a prompt log a name is usually the
+  # end user of the product rather than an incidental mention.
+  - type: PERSON
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.55
+    severity: MEDIUM
+    detection_methods: [ner, context]
+    max_pattern_span: 128
+    description: "End-user or customer name"
+
+  - type: EMAIL_ADDRESS
+    enabled: true
+    action: REDACT
+    confidence_threshold: 0.5
+    severity: MEDIUM
+    detection_methods: [regex, validation]
+    max_pattern_span: 320
+    description: "Account email, often the tenant identifier"
+
+  # --- Operational context ------------------------------------------------
+  # Trace timestamps and request ids are how a latency or error investigation is
+  # conducted, so they follow the destination-aware treatment.
+  - type: IP_ADDRESS
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.6
+    severity: LOW
+    detection_methods: [regex, validation]
+    max_pattern_span: 48
+    description: "Client IP address"
+    destination_actions:
+      INTERNAL_SIEM: ALLOW
+      FILE: REPLACE
+      EXTERNAL_ANALYTICS: REDACT
+      EXTERNAL_LLM: REDACT
+      S3: REDACT
+
+  - type: DATE_TIME
+    enabled: true
+    action: REPLACE
+    confidence_threshold: 0.7
+    severity: LOW
+    detection_methods: [regex, ner]
+    max_pattern_span: 64
+    description: "Trace and request timestamps"
+    field_context_exempt:
+      - leading_iso_timestamp
+      - "@timestamp"
+      - ts
+      - time
+      - timestamp
+      - datetime
+      - created_at
+      - updated_at
+      - eventTime
+      - request_time
+      - latency_ms
+    destination_actions:
+      INTERNAL_SIEM: ALLOW

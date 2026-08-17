@@ -361,7 +361,11 @@ denied. That is the ratchet.</p>
 <td>Built. Account identifiers tokenized to keep records correlatable; scores, tax ids and wire details removed.</td>
 </tr>
 <tr>
-<td><code>HEALTHCARE</code>, <code>RETAIL</code>, <code>EDUCATION</code>, <code>HR_PAYROLL</code>, <code>LEGAL</code>, <code>GOVERNMENT</code>, <code>TELECOM</code>, <code>AUTOMOTIVE</code>, <code>AI_SAAS</code></td>
+<td><code>AI_SAAS</code></td>
+<td>Built. LLM telemetry: prompts, completions, agent memory, tool traffic, retrieval payloads, embeddings.</td>
+</tr>
+<tr>
+<td><code>HEALTHCARE</code>, <code>RETAIL</code>, <code>EDUCATION</code>, <code>HR_PAYROLL</code>, <code>LEGAL</code>, <code>GOVERNMENT</code>, <code>TELECOM</code>, <code>AUTOMOTIVE</code></td>
 <td>Specified in requirements, not yet built</td>
 </tr>
 </tbody>
@@ -383,7 +387,26 @@ institution rather than a customer, and there are few enough in circulation that
 per-value token would be re-identifiable by frequency — a token would imply
 protection it cannot deliver. Credit scores are <code>REDACT</code>, since nobody joins on a
 score, so a correlatable form buys nothing.</p>
-<p>New entity types behind these: <code>ROUTING_NUMBER</code> (ABA checksum enforced),
+<h3>AI_SAAS</h3>
+<p>For LLM application logs and agent traces. An LLM app logs its own traffic, and
+that traffic is whatever the user typed — so prompt logs quietly become some of the
+most PII-dense artifacts a company holds.</p>
+<p>Payload fields are <code>REDACT</code> rather than <code>REPLACE</code>, because a payload is free text
+of unknown composition rather than an identifier with a known shape. Masking it
+would imply its contents had been assessed. <code>SYSTEM_PROMPT</code> is the exception at
+<code>REPLACE</code>, since many system prompts are published and the profile shouldn't assert
+that every one is a secret.</p>
+<p>Embeddings are detected and redacted. A logged vector is not opaque — inversion
+attacks recover substantial portions of the source text, so it ranks with the text
+it encodes rather than with a hash.</p>
+<p>New types: <code>MODEL_PROVIDER_TOKEN</code>, <code>USER_PROMPT</code>, <code>SYSTEM_PROMPT</code>,
+<code>MODEL_COMPLETION</code>, <code>AGENT_MEMORY</code>, <code>TOOL_ARGUMENTS</code>, <code>TOOL_RESPONSE</code>,
+<code>RETRIEVED_DOCUMENT</code>, <code>VECTOR_EMBEDDING</code>.</p>
+<p><strong>What it does not detect.</strong> Requirement 24.1 also lists proprietary source code
+and free-form confidential customer content. Neither has a format, and no
+recognizer for them exists. A clean <code>AI_SAAS</code> result is not evidence that no
+proprietary content is present.</p>
+<p>New entity types behind the financial profiles: <code>ROUTING_NUMBER</code> (ABA checksum enforced),
 <code>SWIFT_CODE</code>, <code>CVV</code>, <code>PIN</code>, <code>TRACK_DATA</code>, <code>CARD_EXPIRY</code>, <code>FINANCIAL_ACCOUNT</code>,
 <code>TAX_IDENTIFIER</code>, <code>CREDIT_SCORE</code>, <code>WIRE_INSTRUCTIONS</code>. Every low-entropy numeric
 type requires an adjacent field label — matching three bare digits as a CVV would

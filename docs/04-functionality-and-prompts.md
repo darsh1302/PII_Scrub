@@ -142,7 +142,8 @@ denied. That is the ratchet.
 | `DEFAULT_PII` | Built. Baseline personal identifiers. Applied when no profile is named. |
 | `PAYMENT_PCI` | Built. Card data tokenized, authentication data removed, track data blocks the artifact. |
 | `FINANCIAL` | Built. Account identifiers tokenized to keep records correlatable; scores, tax ids and wire details removed. |
-| `HEALTHCARE`, `RETAIL`, `EDUCATION`, `HR_PAYROLL`, `LEGAL`, `GOVERNMENT`, `TELECOM`, `AUTOMOTIVE`, `AI_SAAS` | Specified in requirements, not yet built |
+| `AI_SAAS` | Built. LLM telemetry: prompts, completions, agent memory, tool traffic, retrieval payloads, embeddings. |
+| `HEALTHCARE`, `RETAIL`, `EDUCATION`, `HR_PAYROLL`, `LEGAL`, `GOVERNMENT`, `TELECOM`, `AUTOMOTIVE` | Specified in requirements, not yet built |
 
 ### PAYMENT_PCI
 
@@ -166,7 +167,32 @@ per-value token would be re-identifiable by frequency — a token would imply
 protection it cannot deliver. Credit scores are `REDACT`, since nobody joins on a
 score, so a correlatable form buys nothing.
 
-New entity types behind these: `ROUTING_NUMBER` (ABA checksum enforced),
+### AI_SAAS
+
+For LLM application logs and agent traces. An LLM app logs its own traffic, and
+that traffic is whatever the user typed — so prompt logs quietly become some of the
+most PII-dense artifacts a company holds.
+
+Payload fields are `REDACT` rather than `REPLACE`, because a payload is free text
+of unknown composition rather than an identifier with a known shape. Masking it
+would imply its contents had been assessed. `SYSTEM_PROMPT` is the exception at
+`REPLACE`, since many system prompts are published and the profile shouldn't assert
+that every one is a secret.
+
+Embeddings are detected and redacted. A logged vector is not opaque — inversion
+attacks recover substantial portions of the source text, so it ranks with the text
+it encodes rather than with a hash.
+
+New types: `MODEL_PROVIDER_TOKEN`, `USER_PROMPT`, `SYSTEM_PROMPT`,
+`MODEL_COMPLETION`, `AGENT_MEMORY`, `TOOL_ARGUMENTS`, `TOOL_RESPONSE`,
+`RETRIEVED_DOCUMENT`, `VECTOR_EMBEDDING`.
+
+**What it does not detect.** Requirement 24.1 also lists proprietary source code
+and free-form confidential customer content. Neither has a format, and no
+recognizer for them exists. A clean `AI_SAAS` result is not evidence that no
+proprietary content is present.
+
+New entity types behind the financial profiles: `ROUTING_NUMBER` (ABA checksum enforced),
 `SWIFT_CODE`, `CVV`, `PIN`, `TRACK_DATA`, `CARD_EXPIRY`, `FINANCIAL_ACCOUNT`,
 `TAX_IDENTIFIER`, `CREDIT_SCORE`, `WIRE_INSTRUCTIONS`. Every low-entropy numeric
 type requires an adjacent field label — matching three bare digits as a CVV would
