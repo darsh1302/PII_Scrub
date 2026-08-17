@@ -140,13 +140,24 @@ entities:
   # the source text, so a logged vector is closer to logging the input than to
   # logging a hash. REDACT rather than MASK: a masked vector of the right length
   # would imply the values were protected.
+  # max_pattern_span is 2048, not the ~18 KB a printed 1536-dimension vector
+  # occupies. That is deliberate. This value becomes the chunker's overlap, and a
+  # span larger than the chunk size forces the whole document into a single chunk
+  # — which cost 50% throughput and, worse, removed interruptibility: budget
+  # checks and cancellation happen between chunks, and the truncation budget can
+  # only bite between chunks.
+  #
+  # A vector split across a chunk boundary is still fully covered: the pattern
+  # needs eight numbers to match, both halves of a long vector have far more, and
+  # two adjacent matches are both redacted. Only a tail of fewer than eight
+  # floats could survive, which is not enough to invert.
   - type: VECTOR_EMBEDDING
     enabled: true
     action: REDACT
     confidence_threshold: 0.6
     severity: MEDIUM
     detection_methods: [regex, context]
-    max_pattern_span: 65536
+    max_pattern_span: 2048
     description: >
       Embedding vectors. Reversible enough via inversion to be treated as the
       text they encode.
