@@ -243,6 +243,31 @@ and 1.32x at 8 on 12 cores — `re` holds the GIL. A process pool would give a r
 3-4x, at ~600 MB per worker for its own spaCy and Presidio, which rules it out for
 the Cloud demo.
 
+**Evasion resistance is proven for character-level attacks, and has three gaps.**
+`tests/security/test_adversarial_evasion.py` (29 tests) confirms zero-width and
+bidi controls, Cyrillic/Greek homoglyphs, full-width digits, lookalike dashes,
+combining marks and case alternation are all defeated — including a stacked attack
+that still produces a verified-clean artifact, which exercises the offset map under
+normalization.
+
+Three attacks are **not** defended, asserted as passing tests so closing one fails
+loudly rather than being forgotten:
+
+* **Whitespace insertion** — `4 8 2 - 7 1 - 9 0 5 3` is not detected.
+  `strip_whitespace_runs` exists in `utils/normalization.py`, has offset-consistency
+  property tests, and is *never called by the pipeline*. The defence is written and
+  unwired. Closing it needs the second-pass design in its docstring, restricted to
+  validator-backed types: collapsing whitespace unconditionally would join adjacent
+  fields (`port=443 id=12` → `port=443id=12`) and manufacture matches.
+* **Base64-encoded values** — no candidate blob is decoded and re-scanned.
+* **Hex-encoded values** — same.
+
+None of the three emits a warning either, which is the cheap half of the fix and
+worth doing before the detection half.
+
+Worth keeping in perspective: these are *evasion* gaps, not accidental-disclosure
+gaps. Someone logging PII by mistake logs it in plaintext; base64 implies intent.
+
 **NER recall on names is imperfect.** Especially in terse log syntax. Findings
 are presented as a floor, not a guarantee.
 

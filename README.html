@@ -313,6 +313,11 @@ available.</p>
 <p><strong>NER recall on names is imperfect</strong> in terse log syntax. Findings are a floor, not
 a guarantee. &quot;Verified clean&quot; means no residual entities of the types the scan
 actioned — not a proof the file is free of all sensitive data.</p>
+<p><strong>Three evasions are undefended.</strong> Character-level attacks are handled and proven —
+zero-width characters, homoglyphs, full-width digits, lookalike punctuation,
+combining marks, case alternation. But whitespace insertion (<code>4 8 2 - 7 1 - 9 0 5 3</code>),
+base64-encoded and hex-encoded values are not detected, and produce no warning. See
+<code>tests/security/test_adversarial_evasion.py</code>, where each gap is an explicit test.</p>
 <p><strong>No access control.</strong> Single-operator trust model. Startup refuses a non-loopback
 bind unless <code>PII_AGENT_ALLOW_REMOTE=true</code>, which should only be set behind an
 authenticating reverse proxy. RBAC is Phase 2 work.</p>

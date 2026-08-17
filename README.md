@@ -138,6 +138,12 @@ available.
 a guarantee. "Verified clean" means no residual entities of the types the scan
 actioned — not a proof the file is free of all sensitive data.
 
+**Three evasions are undefended.** Character-level attacks are handled and proven —
+zero-width characters, homoglyphs, full-width digits, lookalike punctuation,
+combining marks, case alternation. But whitespace insertion (`4 8 2 - 7 1 - 9 0 5 3`),
+base64-encoded and hex-encoded values are not detected, and produce no warning. See
+`tests/security/test_adversarial_evasion.py`, where each gap is an explicit test.
+
 **No access control.** Single-operator trust model. Startup refuses a non-loopback
 bind unless `PII_AGENT_ALLOW_REMOTE=true`, which should only be set behind an
 authenticating reverse proxy. RBAC is Phase 2 work.
