@@ -155,3 +155,100 @@ def test_teardown_destroys_the_mapping_irrecoverably(settings):
         for value in vars(ctx.token_vault).values()
     )
     assert token.startswith("<CREDIT_CARD:")
+
+
+
+# ---------------------------------------------------------------------------
+# Bounded result retention
+# ---------------------------------------------------------------------------
+def test_results_are_bounded_and_evicted_content_is_deleted(settings):
+    """The UI redraws every retained result, so the list cannot grow forever.
+
+    Eviction deletes the artifact's content too: it is unreachable from the UI
+    once evicted, and keeping sanitized copies alive for results nobody can see
+    is retention without a purpose.
+    """
+    from utils.config import MAX_SESSION_RESULTS
+
+    ctx = get_session_context("retention-results", settings)
+
+    class FakeResult:
+        def __init__(self, request_id: str, handle: str) -> None:
+            self.request_id = request_id
+            self.sanitized_handle = handle
+
+    handles = []
+    for index in range(MAX_SESSION_RESULTS + 3):
+        handle = ctx.content_store.put(
+            f"cleaned {index}",
+            source_type="FILE",
+            source_identifier=f"f{index}.log",
+        )
+        handles.append(handle)
+        ctx.record_result(FakeResult(f"req-{index}", handle))
+
+    assert len(ctx.results()) == MAX_SESSION_RESULTS
+
+    # The three oldest were evicted, and their content went with them.
+    for handle in handles[:3]:
+        assert not ctx.content_store.exists(handle)
+    for handle in handles[3:]:
+        assert ctx.content_store.exists(handle)
+
+
+def test_recording_the_same_request_twice_does_not_consume_capacity(settings):
+    ctx = get_session_context("retention-results-dup", settings)
+
+    class FakeResult:
+        def __init__(self) -> None:
+            self.request_id = "same"
+            self.sanitized_handle = None
+
+    for _ in range(5):
+        ctx.record_result(FakeResult())
+
+    assert len(ctx.results()) == 1
+
+
+# ---------------------------------------------------------------------------
+# The shared NLP pass must fail loudly
+# ---------------------------------------------------------------------------
+def test_shared_nlp_failure_is_recorded_not_silent(monkeypatch):
+    """It depends on a private Presidio method, so a version bump can break it.
+
+    The only symptom would otherwise be everything quietly running ~20% slower.
+    """
+    from core import detector
+
+    detector.reset_shared_nlp_failure()
+    assert detector.shared_nlp_failure() is None
+
+    class Boom:
+        def _doc_to_nlp_artifact(self, doc, language):
+            raise AttributeError("presidio internals moved")
+
+    class FakeAnalyzer:
+        nlp_engine = Boom()
+
+    monkeypatch.setattr(detector, "get_analyzer", lambda: FakeAnalyzer())
+
+    doc, artifacts = detector.build_shared_nlp("Dana Reyes in London")
+
+    assert doc is not None          # detection still works
+    assert artifacts is None       # Presidio will do its own pass
+    recorded = detector.shared_nlp_failure()
+    assert recorded and "AttributeError" in recorded
+    assert "slower" in recorded
+
+    detector.reset_shared_nlp_failure()
+
+
+def test_healthy_shared_nlp_reports_no_failure():
+    from core import detector
+
+    detector.reset_shared_nlp_failure()
+    doc, artifacts = detector.build_shared_nlp("Dana Reyes in London")
+
+    assert doc is not None
+    assert artifacts is not None
+    assert detector.shared_nlp_failure() is None

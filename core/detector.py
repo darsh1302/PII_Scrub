@@ -25,7 +25,7 @@ from models.entities import Entity, severity_for
 from models.enums import ConfidenceSource, DetectorName
 from session.context import get_shared_engine
 from utils.config import SPACY_MODEL_NAME, chunk_timeout_for
-from utils.normalization import normalize
+from utils.normalization import NormalizationResult, normalize
 
 # Presidio entity names mapped to ours where they differ.
 _PRESIDIO_ALIASES = {
@@ -138,14 +138,18 @@ def detect_presidio(
     language: str = "en",
     ledger: CoverageLedger | None = None,
     nlp_artifacts=None,
+    normalized: NormalizationResult | None = None,
 ) -> DetectionOutcome:
     """Run Presidio over ``text``, returning entities in original coordinates.
 
     ``nlp_artifacts`` lets the caller supply a pre-computed NLP pass so Presidio
     does not repeat work this module already did. Optional: when omitted Presidio
     runs its own pass, which is slower and identical.
+
+    ``normalized`` lets the caller supply an existing normalization of the same
+    text, so the index map is built once per chunk instead of once per detector.
     """
-    normalized = normalize(text)
+    normalized = normalized if normalized is not None else normalize(text)
 
     if not normalized.text.strip():
         return DetectionOutcome(elapsed_ms=0.0)
@@ -266,6 +270,10 @@ def detect_presidio(
 # would be a silent recall change dressed up as an optimisation.
 _SPACY_UNUSED_COMPONENTS = ("parser",)
 
+# Set once if the shared-NLP optimisation stops working. Module-level rather than
+# per-session because it is a property of the installed Presidio, not of a user.
+_shared_nlp_failure: str | None = None
+
 
 def build_shared_nlp(text: str, language: str = "en"):
     """Run spaCy once and return ``(doc, nlp_artifacts)`` for both detectors.
@@ -284,17 +292,40 @@ def build_shared_nlp(text: str, language: str = "en"):
     ``artifacts.entities`` carry Presidio's relabelled ones. Our spaCy detector
     maps raw labels, so it must read ``doc.ents``.
     """
+    global _shared_nlp_failure
+
     nlp = get_spacy()
     doc = nlp(text, disable=_SPACY_UNUSED_COMPONENTS)
 
     artifacts = None
     try:
         artifacts = get_analyzer().nlp_engine._doc_to_nlp_artifact(doc, language)
-    except Exception:  # pragma: no cover - Presidio internals changed
-        # Fall back to letting Presidio do its own pass. Slower, never wrong.
+    except Exception as exc:  # pragma: no cover - Presidio internals changed
+        # Falling back is correct — Presidio does its own pass, slower and
+        # identical — but it must not be silent. This depends on a private
+        # Presidio method, so a version bump can break it, and the only symptom
+        # would be everything quietly getting 21% slower forever. Recorded once
+        # and surfaced in the health panel.
         artifacts = None
+        if _shared_nlp_failure is None:
+            _shared_nlp_failure = (
+                f"{exc.__class__.__name__} from Presidio's "
+                f"_doc_to_nlp_artifact — the shared NLP pass is disabled and "
+                f"detection is running the NLP work twice. Correct, ~20% slower."
+            )
 
     return doc, artifacts
+
+
+def shared_nlp_failure() -> str | None:
+    """Why the shared NLP pass is unavailable, or None if it is working."""
+    return _shared_nlp_failure
+
+
+def reset_shared_nlp_failure() -> None:
+    """Test support: clear the recorded failure."""
+    global _shared_nlp_failure
+    _shared_nlp_failure = None
 
 
 # --------------------------------------------------------------------------
@@ -307,6 +338,7 @@ def detect_spacy(
     *,
     ledger: CoverageLedger | None = None,
     doc=None,
+    normalized: NormalizationResult | None = None,
 ) -> DetectionOutcome:
     """Run spaCy NER, returning entities in original coordinates.
 
@@ -314,8 +346,11 @@ def detect_spacy(
     normalized text, so the model runs once per chunk rather than twice. It must
     be a Doc over ``normalize(text).text``, not over the raw text — the offsets
     are mapped back through the normalization index map.
+
+    ``normalized`` lets the caller supply an existing normalization, avoiding a
+    second index-map build for the same chunk.
     """
-    normalized = normalize(text)
+    normalized = normalized if normalized is not None else normalize(text)
 
     if not normalized.text.strip():
         return DetectionOutcome()
@@ -405,11 +440,17 @@ def detect_chunk(
     #
     # Failure here is not fatal: build_shared_nlp returning nothing means each
     # detector falls back to doing its own pass, which is slower and correct.
+    # Normalized once here and threaded through both detectors. Each used to
+    # normalize independently, so a chunk was normalized three times over — once
+    # for the shared NLP pass and once inside each detector — building the same
+    # index map each time.
+    normalized = normalize(text)
+
     doc = None
     artifacts = None
     if use_spacy:
         try:
-            doc, artifacts = build_shared_nlp(normalize(text).text, language)
+            doc, artifacts = build_shared_nlp(normalized.text, language)
         except DetectorUnavailable:
             if ledger is not None:
                 ledger.record_detector_unavailable(
@@ -425,13 +466,16 @@ def detect_chunk(
         language=language,
         ledger=ledger,
         nlp_artifacts=artifacts,
+        normalized=normalized,
     )
 
     if not use_spacy:
         return outcome
 
     try:
-        spacy_outcome = detect_spacy(text, ledger=ledger, doc=doc)
+        spacy_outcome = detect_spacy(
+            text, ledger=ledger, doc=doc, normalized=normalized
+        )
     except DetectorUnavailable:
         # Already recorded in the ledger; coverage will reflect it.
         return outcome

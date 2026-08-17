@@ -112,6 +112,17 @@ def check_engine_versions() -> ComponentHealth:
             detail="; ".join(substitutions),
         )
 
+    # A broken shared-NLP pass is correct but slow, and otherwise invisible.
+    from core.detector import shared_nlp_failure
+
+    degradation = shared_nlp_failure()
+    if degradation:
+        return ComponentHealth(
+            name="Engine versions",
+            status=Health.DEGRADED,
+            detail=degradation,
+        )
+
     return ComponentHealth(
         name="Engine versions",
         status=Health.OK,

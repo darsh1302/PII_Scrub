@@ -188,6 +188,12 @@ DEMO_MAX_TEXT_CHARS = 20_000
 # payroll file in memory overnight.
 SESSION_IDLE_TIMEOUT_SECONDS = 3600
 
+# How many results a session keeps for the UI. The UI redraws every retained
+# result on every rerun, each with a download button carrying its cleaned content,
+# so an unbounded list costs both render time and memory. Ten covers any realistic
+# working set; older artifacts are deleted with their content.
+MAX_SESSION_RESULTS = 10
+
 
 class ConfigError(RuntimeError):
     """Raised when configuration is missing or unsafe. Never contains secrets."""

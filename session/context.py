@@ -81,7 +81,16 @@ class SessionContext:
         Keeps the newest entry for a given request id rather than appending a
         duplicate, so a scan followed by a scrub of the same request presents one
         outcome — the later, more complete one.
+
+        Bounded to MAX_SESSION_RESULTS. The UI redraws every retained result on
+        every rerun, each with a download button holding its cleaned content, so an
+        unbounded list grows both render time and memory across a long session.
+        Evicting also deletes the evicted artifact's content: it is no longer
+        reachable from the UI, and keeping sanitized copies alive for results
+        nobody can see is retention without a purpose.
         """
+        from utils.config import MAX_SESSION_RESULTS
+
         request_id = getattr(result, "request_id", None)
         if request_id is not None:
             self._results = [
@@ -89,6 +98,12 @@ class SessionContext:
                 if getattr(r, "request_id", None) != request_id
             ]
         self._results.append(result)
+
+        while len(self._results) > MAX_SESSION_RESULTS:
+            evicted = self._results.pop(0)
+            handle = getattr(evicted, "sanitized_handle", None)
+            if handle:
+                self.content_store.delete(handle)
 
     def results(self) -> list[object]:
         """Results produced this session, oldest first."""
