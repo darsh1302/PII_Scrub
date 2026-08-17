@@ -164,24 +164,45 @@ threshold with `context` among its detection methods. Disabling it would likely 
 SSNs below threshold in terse log lines. It needs the golden datasets from task 9.5
 first so the recall change can be measured rather than guessed.
 
-**Throughput: ~2.4 KB/s.** Profiled:
+**Throughput: scan ~9.6 KB/s** (median of three runs, 254 KB, one process). A full
+scrub is roughly half that, because verification re-scans.
 
-| Component | Share |
-|---|---|
-| Presidio `analyze` | 79% |
-| — lemma context enhancer | 30% |
-| — phone recognizer (`phonenumbers`) | 20% |
-| — Presidio's own spaCy pipeline | 19% |
-| Verification re-scan | 39% |
+**The duplicated NLP pass is fixed.** Presidio loaded its own spaCy model and ran
+its own pass on top of ours, over identical text for identical output.
+`build_shared_nlp` runs spaCy once and hands `NlpArtifacts` to
+`AnalyzerEngine.analyze`, which then skips its own pass. Measured A/B in a single
+process: **33.7s to 26.5s per scan, 21%**, about 14s over a scrub. Golden results
+came out byte-identical, which is precisely what task 9.5 was built to prove.
 
-Presidio runs its own spaCy pipeline *in addition* to ours — the NLP work happens
-twice, and that is the largest available win. The context enhancer is a config
-switch. The verification re-scan is by design and should not be traded away.
+Two details in that change. Artifacts come from Presidio's own
+`_doc_to_nlp_artifact` rather than being hand-assembled: its NER configuration
+relabels spans on the way through (`GPE` becomes `LOCATION`), and reimplementing
+that would be a second source of truth. And `doc.ents` carry *raw* spaCy labels
+while `artifacts.entities` carry the relabelled ones, so our spaCy detector must
+keep reading `doc.ents`.
+
+**Only the parser is disabled, deliberately.** An earlier version also trimmed the
+lemmatizer, tagger and attribute_ruler for 3.9s. That was wrong: Presidio's context
+enhancer reads `NlpArtifacts.lemmas` to raise scores when a context word sits near
+a match, and DEFAULT_PII depends on it — `US_SSN` has a 0.4 threshold with
+`context` among its detection methods. A test asserts those three stay enabled.
+
+The context enhancer itself remains on for the same reason. It is still the largest
+single line in Presidio's time (10.3s of 28.4s), and with goldens in place its
+removal is now *measurable* — regenerate, diff, and see exactly which entities are
+lost. Do not disable it without that diff.
+
+**Measurement variance is high here.** The same unchanged scrub measured 110.7s,
+86.4s and 118.3s within one session. Single-run wall-clock is not trustworthy: use
+medians of repeated runs, and prefer A/B in one process over cross-session
+comparison.
+
 `PER_TOOL_TIMEOUT_SECONDS` is 180 (was 30, which capped input at ~70 KB).
 
-At this rate a 10 MB log takes over an hour, which does not meet the "production
-logs" framing in the requirements. Chunks are independent by construction, so
-parallelism is available.
+Chunks are independent, but threaded parallelism measured only 1.22x at 2 threads
+and 1.32x at 8 on 12 cores — `re` holds the GIL. A process pool would give a real
+3-4x, at ~600 MB per worker for its own spaCy and Presidio, which rules it out for
+the Cloud demo.
 
 **NER recall on names is imperfect.** Especially in terse log syntax. Findings
 are presented as a floor, not a guarantee.

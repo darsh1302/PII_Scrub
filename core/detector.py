@@ -137,8 +137,14 @@ def detect_presidio(
     threshold: float = 0.0,
     language: str = "en",
     ledger: CoverageLedger | None = None,
+    nlp_artifacts=None,
 ) -> DetectionOutcome:
-    """Run Presidio over ``text``, returning entities in original coordinates."""
+    """Run Presidio over ``text``, returning entities in original coordinates.
+
+    ``nlp_artifacts`` lets the caller supply a pre-computed NLP pass so Presidio
+    does not repeat work this module already did. Optional: when omitted Presidio
+    runs its own pass, which is slower and identical.
+    """
     normalized = normalize(text)
 
     if not normalized.text.strip():
@@ -176,6 +182,9 @@ def detect_presidio(
             entities=entity_types or None,
             language=language,
             score_threshold=threshold,
+            # When supplied, Presidio skips its own spaCy pass. Verified to
+            # produce byte-identical results to letting it run its own.
+            nlp_artifacts=nlp_artifacts,
         )
     except Exception as exc:
         if ledger is not None:
@@ -248,20 +257,64 @@ def detect_presidio(
 
 
 # --------------------------------------------------------------------------
+# Shared NLP pass
+# --------------------------------------------------------------------------
+# Only the parser is skipped. The lemmatizer and its prerequisites are required:
+# Presidio's context enhancer reads ``NlpArtifacts.lemmas`` to raise scores when
+# a context word sits near a match, and DEFAULT_PII depends on that — US_SSN has
+# a 0.4 threshold with ``context`` among its detection methods. Trimming lemmas
+# would be a silent recall change dressed up as an optimisation.
+_SPACY_UNUSED_COMPONENTS = ("parser",)
+
+
+def build_shared_nlp(text: str, language: str = "en"):
+    """Run spaCy once and return ``(doc, nlp_artifacts)`` for both detectors.
+
+    Presidio loads its own spaCy model and runs its own pass, on top of the pass
+    this module already runs — the NLP work happened twice on identical text for
+    identical output. ``AnalyzerEngine.analyze`` accepts pre-computed artifacts,
+    so one pass can serve both.
+
+    The artifacts are produced by Presidio's own converter rather than assembled
+    here. Its NER configuration relabels and filters spans on the way through
+    (``GPE`` becomes ``LOCATION``, for instance), and reimplementing that mapping
+    would be a second source of truth that drifts.
+
+    Note the returned ``doc.ents`` carry *raw* spaCy labels while
+    ``artifacts.entities`` carry Presidio's relabelled ones. Our spaCy detector
+    maps raw labels, so it must read ``doc.ents``.
+    """
+    nlp = get_spacy()
+    doc = nlp(text, disable=_SPACY_UNUSED_COMPONENTS)
+
+    artifacts = None
+    try:
+        artifacts = get_analyzer().nlp_engine._doc_to_nlp_artifact(doc, language)
+    except Exception:  # pragma: no cover - Presidio internals changed
+        # Fall back to letting Presidio do its own pass. Slower, never wrong.
+        artifacts = None
+
+    return doc, artifacts
+
+
+# --------------------------------------------------------------------------
 # spaCy
 # --------------------------------------------------------------------------
-# Pipeline components whose output this module never reads. Disabled per call
-# rather than at load time, because the shared model is also used elsewhere and
-# a load-time removal would be an invisible global change.
-_SPACY_UNUSED_COMPONENTS = ("parser", "tagger", "lemmatizer", "attribute_ruler")
 
 
 def detect_spacy(
     text: str,
     *,
     ledger: CoverageLedger | None = None,
+    doc=None,
 ) -> DetectionOutcome:
-    """Run spaCy NER, returning entities in original coordinates."""
+    """Run spaCy NER, returning entities in original coordinates.
+
+    ``doc`` lets the caller supply a Doc already produced for this same
+    normalized text, so the model runs once per chunk rather than twice. It must
+    be a Doc over ``normalize(text).text``, not over the raw text — the offsets
+    are mapped back through the normalization index map.
+    """
     normalized = normalize(text)
 
     if not normalized.text.strip():
@@ -282,11 +335,8 @@ def detect_spacy(
         ledger.start_detector(DetectorName.SPACY.value)
 
     try:
-        # Only ``doc.ents`` is read below, and NER in en_core_web_lg depends on
-        # tok2vec rather than on the parser, tagger or lemmatizer. Running those
-        # was ~40% of this pass for output we discard. Measured on a 260 KB input:
-        # 10.4s to 6.5s, entity count unchanged.
-        doc = nlp(normalized.text, disable=_SPACY_UNUSED_COMPONENTS)
+        if doc is None:
+            doc = nlp(normalized.text, disable=_SPACY_UNUSED_COMPONENTS)
     except Exception as exc:
         if ledger is not None:
             ledger.record_detector_failure(
@@ -349,19 +399,39 @@ def detect_chunk(
     want Presidio results for reporting. Whether that is sufficient is decided
     by the coverage gate, not here.
     """
+    # One spaCy pass feeds both detectors. Presidio would otherwise run its own
+    # over identical text for identical output — the single largest piece of
+    # duplicated work in the pipeline.
+    #
+    # Failure here is not fatal: build_shared_nlp returning nothing means each
+    # detector falls back to doing its own pass, which is slower and correct.
+    doc = None
+    artifacts = None
+    if use_spacy:
+        try:
+            doc, artifacts = build_shared_nlp(normalize(text).text, language)
+        except DetectorUnavailable:
+            if ledger is not None:
+                ledger.record_detector_unavailable(
+                    DetectorName.SPACY.value, "spaCy model unavailable"
+                )
+            doc = None
+            artifacts = None
+
     outcome = detect_presidio(
         text,
         entity_types=entity_types,
         threshold=threshold,
         language=language,
         ledger=ledger,
+        nlp_artifacts=artifacts,
     )
 
     if not use_spacy:
         return outcome
 
     try:
-        spacy_outcome = detect_spacy(text, ledger=ledger)
+        spacy_outcome = detect_spacy(text, ledger=ledger, doc=doc)
     except DetectorUnavailable:
         # Already recorded in the ledger; coverage will reflect it.
         return outcome

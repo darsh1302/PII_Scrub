@@ -321,3 +321,76 @@ def test_clean_fixture_yields_no_high_confidence_pii():
     # DATE_TIME on log timestamps is expected here; nothing else should appear.
     unexpected = {e.type for e in filtered} - {"DATE_TIME"}
     assert not unexpected, f"false positives on clean content: {unexpected}"
+
+
+
+# ---------------------------------------------------------------------------
+# Shared NLP pass
+# ---------------------------------------------------------------------------
+# Presidio loaded its own spaCy model and ran its own pass on top of ours, so the
+# NLP work happened twice on identical text for identical output. One pass now
+# feeds both. The invariant is that sharing changes nothing about what is found —
+# it is purely a saving, and the moment it stops being purely a saving it is a
+# silent detection regression.
+def test_shared_nlp_returns_a_doc_and_artifacts():
+    from core.detector import build_shared_nlp
+
+    doc, artifacts = build_shared_nlp(
+        "Contact Priya Raghunathan at priya@example.com in London"
+    )
+    assert doc is not None
+    assert artifacts is not None
+    # Raw spaCy labels on the doc, Presidio's relabelled ones on the artifacts.
+    assert any(ent.label_ == "PERSON" for ent in doc.ents)
+    assert artifacts.lemmas, "lemmas are required by Presidio's context enhancer"
+
+
+def test_supplying_artifacts_does_not_change_presidio_output():
+    """The whole optimisation rests on this."""
+    from core.detector import build_shared_nlp, detect_presidio, normalize
+
+    text = (
+        "user=Dana Reyes email=dana.reyes@example.com ssn=482-71-9053 "
+        "card=4532015112830366 host=London office ip=10.20.4.11"
+    )
+
+    _, artifacts = build_shared_nlp(normalize(text).text)
+
+    without = detect_presidio(text, threshold=0.0)
+    with_shared = detect_presidio(text, threshold=0.0, nlp_artifacts=artifacts)
+
+    def signature(outcome):
+        return sorted(
+            (e.type, e.start, e.end, round(float(e.confidence), 6))
+            for e in outcome.entities
+        )
+
+    assert signature(with_shared) == signature(without)
+
+
+def test_supplying_a_doc_does_not_change_spacy_output():
+    from core.detector import build_shared_nlp, detect_spacy, normalize
+
+    text = "Priya Raghunathan met Dana Reyes in London and Berlin last week."
+    doc, _ = build_shared_nlp(normalize(text).text)
+
+    without = detect_spacy(text)
+    with_shared = detect_spacy(text, doc=doc)
+
+    def signature(outcome):
+        return sorted((e.type, e.start, e.end) for e in outcome.entities)
+
+    assert signature(with_shared) == signature(without)
+
+
+def test_lemmatizer_stays_enabled():
+    """Presidio's context enhancer reads lemmas to boost context-adjacent scores.
+
+    DEFAULT_PII gives US_SSN a 0.4 threshold with ``context`` among its detection
+    methods, so dropping lemmas would lower recall while looking like a speedup.
+    """
+    from core.detector import _SPACY_UNUSED_COMPONENTS
+
+    assert "lemmatizer" not in _SPACY_UNUSED_COMPONENTS
+    assert "tagger" not in _SPACY_UNUSED_COMPONENTS
+    assert "attribute_ruler" not in _SPACY_UNUSED_COMPONENTS
