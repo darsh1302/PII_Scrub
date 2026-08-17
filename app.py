@@ -23,7 +23,13 @@ from core.file_source import load_upload
 from models.enums import AgentStateEnum
 from session.context import get_session_context
 from ui.health import collect_health, overall_status, scrubbing_blockers
-from ui.presenters import format_state
+from ui.presenters import (
+    DESTINATION_NOTES,
+    PROMPT_EXAMPLES,
+    available_profile_names,
+    build_profile_catalog,
+    format_state,
+)
 from utils.config import DEMO_MAX_UPLOAD_BYTES, DEMO_MODE, load_settings
 from utils.content_gate import sanitize_error
 from utils.paths import PathRefused
@@ -207,6 +213,60 @@ if report.warnings:
     with st.expander(f"⚠️ {len(report.warnings)} startup warning(s)"):
         for warning in report.warnings:
             st.caption(warning)
+
+
+# ---------------------------------------------------------------------------
+# Capability and prompt help
+# ---------------------------------------------------------------------------
+# Users cannot ask for what they cannot see. Both panels read from the resolved
+# profiles rather than a written-out list, so they cannot drift from behaviour.
+_help_left, _help_right = st.columns(2)
+
+with _help_left.expander("💬 How to ask"):
+    st.caption(
+        "Plain language works. Name a **destination** — a couple of types are "
+        "handled differently depending on where the data goes, and I ask rather "
+        "than guess."
+    )
+    for label, example in PROMPT_EXAMPLES:
+        st.markdown(f"**{label}**")
+        st.code(example, language=None)
+
+    st.markdown("**Destinations**")
+    for name, note in DESTINATION_NOTES:
+        st.caption(f"`{name}` — {note}")
+
+with _help_right.expander("🔍 What I can detect"):
+    _profiles = available_profile_names()
+    _selected = st.selectbox(
+        "Profile",
+        _profiles,
+        index=_profiles.index("DEFAULT_PII") if "DEFAULT_PII" in _profiles else 0,
+        help="Effective rules, including everything inherited from parents.",
+    )
+    _catalog = build_profile_catalog(_selected)
+    st.caption(
+        f"{len(_catalog)} entity types under **{_selected}**, including inherited "
+        f"rules. The action shown is what policy resolves to — you can request "
+        f"stricter, never weaker."
+    )
+    st.dataframe(
+        [
+            {
+                "": row.severity_icon,
+                "Type": row.entity_type,
+                "Action": row.action,
+                "What it is": row.description,
+            }
+            for row in _catalog
+        ],
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.caption(
+        "Detection is a floor, not a guarantee — name recall in terse log syntax "
+        "is imperfect."
+    )
 
 
 # ---------------------------------------------------------------------------

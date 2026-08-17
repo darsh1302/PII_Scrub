@@ -5,8 +5,10 @@
 # exhaust memory before the app ever sees the bytes.
 [server]
 maxUploadSize = 1
+# XSRF protection requires CORS restrictions to work, so enableCORS is left at its
+# default of true. Setting it false alongside XSRF protection is contradictory —
+# Streamlit overrode it back and warned on every start.
 enableXsrfProtection = true
-enableCORS = false
 
 [browser]
 gatherUsageStats = false

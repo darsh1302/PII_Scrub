@@ -298,3 +298,113 @@ def describe_security_findings(result: ProcessingResult) -> str | None:
 
 def format_state(state: str) -> str:
     return f"{STATE_ICONS.get(state, '⚪')} {state.replace('_', ' ').title()}"
+
+
+
+# ---------------------------------------------------------------------------
+# Capability catalogue and prompt examples
+# ---------------------------------------------------------------------------
+# Users cannot ask for what they cannot see. Without this the only way to learn
+# that PAYMENT_PCI tokenizes a card while DEFAULT_PII masks it was to run both and
+# compare, or read the YAML.
+#
+# Read live from the resolved profiles rather than written out here. A hardcoded
+# list would drift the first time a profile changed, and a capability list that
+# overstates what is detected is worse than none — someone would rely on it.
+
+# Kept in sync by construction: examples reference only built profiles, and a test
+# asserts that.
+PROMPT_EXAMPLES: list[tuple[str, str]] = [
+    (
+        "Scan and clean, one step",
+        "scrub sample.txt with DEFAULT_PII for INTERNAL_SIEM",
+    ),
+    ("Report only, no cleaned copy", "scan sample.txt for INTERNAL_SIEM"),
+    ("See what is available", "what can you scan?"),
+    ("Understand a profile", "what does PAYMENT_PCI cover?"),
+    (
+        "Compare destinations",
+        "scrub sample.txt for EXTERNAL_LLM",
+    ),
+    ("Ask for stricter handling", "scrub sample.txt and redact everything"),
+    ("Stop repeating yourself", "remember that my destination is INTERNAL_SIEM"),
+    ("Correct a false positive", "that hostname is not a person, ignore it"),
+]
+
+DESTINATION_NOTES: list[tuple[str, str]] = [
+    ("INTERNAL_SIEM", "Staying inside your infrastructure. Keeps IPs and timestamps."),
+    ("FILE", "A local copy you are keeping. Replaces IPs."),
+    ("EXTERNAL_ANALYTICS", "Third-party platform. Redacts operational identifiers."),
+    ("EXTERNAL_LLM", "Pasting into a hosted model. Redacts operational identifiers."),
+    ("S3", "Object storage, treated as external."),
+]
+
+
+@dataclass
+class CatalogEntry:
+    """One entity type as the active profile handles it."""
+
+    entity_type: str
+    action: str
+    severity_icon: str
+    severity_label: str
+    description: str
+
+
+def build_profile_catalog(profile_name: str) -> list[CatalogEntry]:
+    """Entity types a profile detects, with the action it resolves to.
+
+    Raises nothing on an unknown profile — returns empty, so a UI panel cannot
+    take the page down over a display concern.
+    """
+    from core.profile_resolver import get_resolver
+    from models.entities import severity_for
+
+    try:
+        profile = get_resolver().resolve(profile_name)
+    except Exception:
+        return []
+
+    entities = profile.entities
+    items = entities.values() if isinstance(entities, dict) else entities
+
+    catalog: list[CatalogEntry] = []
+    for rule in items:
+        if not rule.enabled:
+            continue
+        # The profile may state a severity; otherwise fall back to the type's
+        # default so the column is never blank.
+        if rule.severity in {s.value for s in EntitySeverity}:
+            severity = EntitySeverity(rule.severity)
+        else:
+            severity = severity_for(rule.type)
+        icon, label = SEVERITY_STYLE[severity]
+
+        # A destination-sensitive rule has no single answer, so say so rather
+        # than showing the base action as if it were final.
+        action = rule.action.value
+        if rule.destination_actions:
+            action = f"{action} (varies by destination)"
+
+        catalog.append(
+            CatalogEntry(
+                entity_type=rule.type,
+                action=action,
+                severity_icon=icon,
+                severity_label=label,
+                description=rule.description or "",
+            )
+        )
+
+    catalog.sort(key=lambda e: (-SEVERITY_ORDER.get(e.severity_label, 0), e.entity_type))
+    return catalog
+
+
+def available_profile_names() -> list[str]:
+    """Built profiles, for a picker. Never raises."""
+    from core.profile_resolver import get_resolver
+
+    try:
+        return list(get_resolver().available_profiles())
+    except Exception:
+        return ["DEFAULT_PII"]
