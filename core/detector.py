@@ -250,6 +250,12 @@ def detect_presidio(
 # --------------------------------------------------------------------------
 # spaCy
 # --------------------------------------------------------------------------
+# Pipeline components whose output this module never reads. Disabled per call
+# rather than at load time, because the shared model is also used elsewhere and
+# a load-time removal would be an invisible global change.
+_SPACY_UNUSED_COMPONENTS = ("parser", "tagger", "lemmatizer", "attribute_ruler")
+
+
 def detect_spacy(
     text: str,
     *,
@@ -276,7 +282,11 @@ def detect_spacy(
         ledger.start_detector(DetectorName.SPACY.value)
 
     try:
-        doc = nlp(normalized.text)
+        # Only ``doc.ents`` is read below, and NER in en_core_web_lg depends on
+        # tok2vec rather than on the parser, tagger or lemmatizer. Running those
+        # was ~40% of this pass for output we discard. Measured on a 260 KB input:
+        # 10.4s to 6.5s, entity count unchanged.
+        doc = nlp(normalized.text, disable=_SPACY_UNUSED_COMPONENTS)
     except Exception as exc:
         if ledger is not None:
             ledger.record_detector_failure(

@@ -140,6 +140,30 @@ detection work — a 276× overhead that was 10 of the suite's original 12 minut
 
 ## Known limitations
 
+**Unlabelled numeric fallback patterns are a false economy.** The first cut of
+`financial_recognizers.py` had bare patterns for routing numbers, SWIFT codes and
+EINs alongside the labelled ones. In a log full of ids and durations they matched
+constantly — 379 extra candidates per 40 KB chunk, ~2,650 over a 260 KB file — and
+that volume through reconciliation and the verification re-scan pushed the run past
+the 180s tool budget, which the coverage gate correctly reported as
+`DEGRADED_COVERAGE`. They were removed. Note one in ten nine-digit numbers passes
+the ABA checksum by chance, so an unlabelled routing-number match was mostly noise
+regardless. Every low-entropy numeric type now requires an adjacent field label.
+
+**Parallelism measured, not assumed.** Threaded chunk detection gives 1.22x at 2
+threads and 1.32x at 8, on a 12-core machine — `re` holds the GIL, so the regex
+work serialises. A process pool would give a real 3-4x because detection is a pure
+`text -> entities` function and only strings cross the boundary, but each worker
+loads its own spaCy model and Presidio engine (~600 MB), which rules it out for the
+Cloud demo. Not built.
+
+**Presidio's context enhancer is deliberately left on** despite being the single
+largest line (10.3s of 28.4s on a 260 KB input). It raises scores when context
+words sit near a match, and `DEFAULT_PII` depends on that — `US_SSN` has a 0.4
+threshold with `context` among its detection methods. Disabling it would likely drop
+SSNs below threshold in terse log lines. It needs the golden datasets from task 9.5
+first so the recall change can be measured rather than guessed.
+
 **Throughput: ~2.4 KB/s.** Profiled:
 
 | Component | Share |

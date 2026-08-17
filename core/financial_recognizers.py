@@ -40,8 +40,13 @@ ROUTING_NUMBER_PATTERNS = [
         ),
         score=0.6,
     ),
-    # Unlabelled: only reaches a usable score if the checksum validates.
-    Pattern(name="routing_number_bare", regex=r"\b(\d{9})\b", score=0.05),
+    # No unlabelled fallback, deliberately. One in ten nine-digit numbers passes
+    # the ABA checksum by chance, so an unlabelled match is overwhelmingly a
+    # coincidence — and in a log full of ids and durations it matched constantly,
+    # adding hundreds of candidates per chunk that reconciliation then had to
+    # process. That volume pushed large inputs past the tool budget, which the
+    # coverage gate correctly reported as incomplete. Recall here is not worth an
+    # unverifiable finding plus a fail-closed refusal.
 ]
 
 
@@ -93,11 +98,8 @@ SWIFT_CODE_PATTERNS = [
         ),
         score=0.75,
     ),
-    Pattern(
-        name="swift_bic_bare",
-        regex=r"\b([A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)\b",
-        score=0.3,
-    ),
+    # No unlabelled fallback: an 8-to-11 character uppercase alphanumeric run is
+    # also every request id, hostname fragment and enum value in a log.
 ]
 
 # --------------------------------------------------------------------------
@@ -184,11 +186,8 @@ TAX_IDENTIFIER_PATTERNS = [
         ),
         score=0.75,
     ),
-    Pattern(
-        name="ein_bare",
-        regex=r"\b(\d{2}-\d{7})\b",
-        score=0.35,
-    ),
+    # No unlabelled fallback: ``NN-NNNNNNN`` is a common shape for order numbers,
+    # part numbers and split identifiers.
 ]
 
 CREDIT_SCORE_PATTERNS = [
