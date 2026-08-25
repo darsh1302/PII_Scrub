@@ -385,3 +385,156 @@ an entry fails the suite — which is the point, because adding a table is easy 
 while forgetting the retention question, and a category nobody classified is a
 category nobody deletes.
 """
+
+
+# ---------------------------------------------------------------------------
+# The documented statement — Requirement 14.8, task 4.5
+# ---------------------------------------------------------------------------
+def render_data_statement() -> str:
+    """Render `[R14.8]`'s statement of what is stored and where.
+
+    Generated from the registry rather than written by hand, and
+    ``tests/explorer/storage/test_data_statement.py`` fails when the file on disk
+    differs from this output.
+
+    That is the whole reason it is a function. `[R14.8]` asks for a statement
+    "maintained as part of the deliverable rather than as tribal knowledge", and a
+    hand-written document describing data placement is out of date the first time
+    someone adds a table — while still reading as authoritative, which is worse than
+    having none.
+    """
+    lines = [
+        "# What the platform stores, and where",
+        "",
+        "**Generated from `explorer/storage/classification.py`. Do not edit by hand.**",
+        "Run `python tools_dev/build_data_statement.py` after changing the registry;",
+        "`tests/explorer/storage/test_data_statement.py` fails if this file is stale.",
+        "",
+        "Requirement 14.8. Every persisted category is classified as content, derived",
+        "metadata, configuration or telemetry (`[R14.1]`), and the classification",
+        "decides both where the data lives and which retention clock governs it.",
+        "",
+        "## Encryption at rest (`[R14.2]`)",
+        "",
+        "Named rather than implied, and it differs by store.",
+        "",
+        "- **Postgres** — whole-volume encryption provided by the operating system.",
+        "  This platform does not encrypt individual columns, so on an unencrypted",
+        "  volume the rows are plaintext on disk.",
+        "- **Object store, filesystem adapter** — the same. It is the",
+        "  local-development adapter.",
+        "- **Object store, S3 adapter** — server-side encryption, requested explicitly",
+        "  on every `put` rather than relying on a bucket default, because a bucket",
+        "  default is a setting someone else can change.",
+        "- **Audit chain** — not encrypted. It holds identifiers and counts by",
+        "  contract, enforced at write time.",
+        "",
+        "Application-level envelope encryption is deliberately absent: it would put a",
+        "key in the same process as the ciphertext it protects, which buys less than it",
+        "appears to. The honest position is to name what the platform relies on so an",
+        "operator can verify it.",
+        "",
+        "## Categories",
+        "",
+    ]
+
+    by_class: dict[DataClass, list[Classification]] = {}
+    for classification in REGISTRY:
+        by_class.setdefault(classification.data_class, []).append(classification)
+
+    headings = {
+        DataClass.CONTENT: (
+            "Content",
+            "May contain sensitive data. Retention is configurable per workspace and "
+            "startup refuses when a period is missing (`[R14.3]`).",
+        ),
+        DataClass.DERIVED_METADATA: (
+            "Derived metadata",
+            "Counts, scores, offsets and entity types. No values, by contract.",
+        ),
+        DataClass.CONFIGURATION: (
+            "Configuration",
+            "Settings and definitions. Retained until explicitly removed.",
+        ),
+        DataClass.TELEMETRY: (
+            "Telemetry",
+            "Redacted before persistence (`[R6.8]`), and still on a retention clock — "
+            "redaction reduces exposure, it does not eliminate it.",
+        ),
+    }
+
+    for data_class in DataClass:
+        entries = sorted(by_class.get(data_class, []), key=lambda c: c.category)
+        if not entries:
+            continue
+        title, preamble = headings[data_class]
+        lines += [f"### {title}", "", preamble, ""]
+        lines += ["| Category | Store | Retention | Why |", "|---|---|---|---|"]
+        for entry in entries:
+            rationale = " ".join(entry.rationale.split())
+            lines.append(
+                f"| `{entry.category}` | {entry.store.value} | "
+                f"{entry.retention.value} | {rationale} |"
+            )
+        lines.append("")
+
+    lines += [
+        "## Tables",
+        "",
+        "Which classification governs each table. Asserted against a live database by",
+        "`tests/explorer/storage/test_classification.py`, so a table cannot exist here",
+        "without an answer to the question of when its data is deleted.",
+        "",
+        "| Table | Category |",
+        "|---|---|",
+    ]
+    for table, category in sorted(TABLE_CATEGORY.items()):
+        lines.append(f"| `{table}` | `{category}` |")
+
+    lines += [
+        "",
+        "Not every category has a table, which is intentional. Document and artifact",
+        "payloads live in the object store, with Postgres holding only metadata and a",
+        "reference. Chunk text is likewise a payload. The audit trail is hash-chained",
+        "JSONL rather than a table, because a row the application can rewrite is not",
+        "tamper-evident and `[R14.6]` needs audit records to outlive the data they",
+        "describe.",
+        "",
+        "## Deletion (`[R14.5]`, `[R14.6]`)",
+        "",
+        "Deleting a document removes its chunks, embeddings and object-store payloads.",
+        "Deleting a workspace removes everything it owns, in both stores. Payloads are",
+        "removed *before* rows: the residual failure mode is then a row pointing at a",
+        "missing payload, which is visible and recoverable, rather than bytes on disk",
+        "with nothing referencing them.",
+        "",
+        "Every deletion writes a record to the audit chain, including a deletion that",
+        "failed partway — that is the case most needing intervention, so it is the",
+        "last case that should lack evidence. The record carries identifiers and",
+        "counts, never a label or content.",
+        "",
+        "## Retention periods required at startup",
+        "",
+        "Derived from the registry, not listed separately, so a new content category",
+        "acquires the requirement by being classified as content:",
+        "",
+    ]
+    for category in sorted(RETENTION_REQUIRED_CATEGORIES):
+        lines.append(f"- `{category}`")
+
+    lines += [
+        "",
+        "## What the platform never persists",
+        "",
+        "- **Provider credentials and API keys** (`[R15.7]`). Read from the",
+        "  environment or a secret provider, never written to a table, a trace or a",
+        "  prompt.",
+        "- **Session bearer tokens.** Only their SHA-256, so a database read yields",
+        "  nothing replayable.",
+        "- **Entity values in traces or audit records.** Redaction happens on the write",
+        "  path, and forbidden field names are rejected at write time rather than",
+        "  trusted to review.",
+        "",
+    ]
+
+    return "\n".join(lines)

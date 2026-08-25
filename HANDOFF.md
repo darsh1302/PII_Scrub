@@ -51,13 +51,19 @@ Explorer:
 | 0 | 1 | Restructure — two product packages, import-direction test | ✅ |
 | 1 | 2 | Storage foundation — Postgres, migrations, object store | ✅ |
 | 2 | 3 | Auth and isolation — identity, roles, the isolation matrix | ✅ |
-| 3 | 4 | Retention and deletion | ⬜ next |
-| 4 | 5 | Observability | ⬜ |
+| 3 | 4 | Retention and deletion — startup gate, cascade, audit | ✅ |
+| 4 | 5 | Observability — trace events, redaction on the write path | ⬜ next |
 | 5–14 | 6–15 | Model gateway through MVP acceptance | ⬜ |
 
-**1143 tests passing, 4 skipped.** 966 from the PII agent, unchanged in behaviour
-through the restructure, 10 architecture tests, and 167 for the storage foundation
-and the authenticated boundary.
+No UI yet, by plan. The experience layer is task 14, deliberately last because it
+sits over completed labs. `explorer/ui/` is a docstring, and `apps/explorer_app.py`
+appears in the design's target structure but does not exist — an entry point that
+renders nothing invites someone to run it and conclude the platform is broken. The
+PII agent's UI is untouched and still runs standalone.
+
+**1195 tests passing, 4 skipped.** 966 from the PII agent, unchanged in behaviour
+through the restructure, 10 architecture tests, and 219 for the storage foundation,
+the authenticated boundary, and retention.
 
 Run: `venv\Scripts\python -m pytest tests\ -q`
 
@@ -239,6 +245,57 @@ service that will not start rather than one that starts open. Only the exact str
 means a typo silently opens the port. An unparseable address counts as non-loopback,
 since DNS can point a friendly hostname anywhere.
 
+## Retention and deletion
+
+**Payloads are deleted before rows, deliberately.** The database cascade removes rows
+and cannot reach the object store, so a complete deletion is two steps and the
+question is what happens between them.
+
+Rows first, then a payload failure, leaves bytes on disk with nothing referencing
+them — no workspace to attribute them to and no way to find them except by walking
+the store. That is content surviving its own deletion. Payloads first, then a row
+failure, leaves a row pointing at a missing payload: a fetch raises, it is
+attributable, and re-running the deletion fixes it. The residual failure mode is
+chosen rather than accepted, and it is the recoverable one.
+
+**The audit record is written last, and always — including on partial failure.** Last,
+because a record claiming a deletion that then failed is worse than none. Always,
+because the partial case is the one that needs intervention, so it should not be the
+one case with no evidence. Records carry identifiers and counts. A document *label*
+would be more useful to read and is content, in the one file designed to outlive every
+retention policy, so field names are checked against a forbidden set at write time.
+
+**The sweeper skips a workspace entirely when any required period is missing.** Not
+partially. Sweeping the configured categories and leaving the rest would make the
+startup refusal look optional — the system would appear to work while retaining a
+category forever. `cutoff_for` returns `None` rather than a permissive default for the
+same reason; a default there would be the single most damaging line in the module.
+
+**Retention validation is per workspace, not global.** A global check passes as soon as
+one workspace is configured, leaving every other tenant's content unbounded — and the
+configured one is usually the developer's own.
+
+**The property test asserts the negative.** Nothing inside its retention window is ever
+deleted, over arbitrary periods and ages. A second property asserts the positive
+direction, because a sweeper that simply never deleted would satisfy the first
+completely. The boundary is explicit: a document exactly at its period is retained.
+
+**`explorer/observability/audit_chain.py` duplicates the PII agent's hash chaining.**
+That is the price of D1 and D2 — a deletion audit is not a PII operation, so it cannot
+route through the `pii_service` seam, and the design rejected a `shared/` package as
+the place coupling hides. The duplication is bounded by a contract test that asserts
+both produce identical canonical form and identical hashes, and that a trail written by
+the platform verifies with the agent's verifier. Pinned by test rather than by shared
+code, so drift fails immediately instead of surfacing when someone tries to verify an
+old trail.
+
+**`docs/05-data-statement.md` is generated from the classification registry.**
+`[R14.8]` asks for a statement maintained as part of the deliverable rather than as
+tribal knowledge, and a hand-written document about data placement is stale the first
+time someone adds a table — while still reading as authoritative. A test fails when the
+file on disk differs from the rendered output. Another test asserts it is in
+`build_docs.py`'s page list, which caught it being absent.
+
 ## The isolation matrix, and why its second test matters more
 
 `tests/explorer/security/test_isolation_matrix.py` drives every workspace-scoped read
@@ -286,6 +343,12 @@ every module under `pii_agent/` and `explorer/`.
   `explorer.security.identity` and imported by the session repository, so storage
   depended on security. It ran and every test passed. The record moved to
   `explorer/storage/records.py` with the other row shapes
+
+D8 earned itself back one task later. The first draft of `explorer/storage/deletion.py`
+imported `explorer.observability.audit_chain` for the deletion audit, which would have
+run fine and meant a change to trace-event handling could break document deletion. It
+now takes an `AuditWriter` protocol declared in `explorer/storage/protocols.py`, and the
+composition root supplies the implementation.
 
 `explorer.security.identity` is in the deterministic list alongside storage and
 chunking: nothing about verifying a password or resolving a session needs a model, so
@@ -575,19 +638,20 @@ record, so a floating version would make historical results non-reproducible.
 Work has moved to the Explorer plan. Task 1 is complete and pushed
 (`17a4256` on `origin/main`).
 
-1. **Explorer task 4 — retention and deletion.** A startup precondition, not a policy
-   document. `RETENTION_REQUIRED_CATEGORIES` and `missing_categories()` already exist
-   for it to build on, derived from the classification registry rather than listed
-   separately, so a new content category cannot avoid acquiring a period. The cascade
-   is already asserted at the row level; what task 4.2 adds is object-store payload
-   removal, which the database cannot do — Property 14 covers both halves.
-2. **Then task 5 — observability.** Trace events with redaction on the write path.
+1. **Explorer task 5 — observability.** Trace events with redaction on the write path.
    The `trace_event` table and its `redaction_count` column exist; the middleware does
-   not. Property 11 must be asserted on the write call, not on rendered output.
-3. **Not yet built, deliberately.** The FastAPI application. Identity, sessions,
-   roles and scoping are complete and unit-tested beneath it, so the API is a thin
-   caller — but nothing currently binds a port, and `evaluate_bind` has no caller.
-   Wire it when there is a server to wire it into.
+   not. Property 11 must be asserted on the write *call*, not on rendered output —
+   redacting at render time means the store holds the values and every future reader is
+   one forgotten call away from them. `[R6.7]` wants the count reported without the
+   values, which is what the column is for. Reuse the PII agent's `redact_secret_shapes`
+   and `shorten_paths` through the `pii_service` seam rather than reimplementing them.
+2. **Then task 6 (model gateway) and task 11 (PII service) in parallel** — wave 6.
+   Independent of each other, both need only traces.
+3. **Wired but uncalled, deliberately.** `validate_retention`, `RetentionSweeper` and
+   `evaluate_bind` are complete and tested, and nothing calls them, because there is no
+   process to call them from. They belong at a composition root that arrives with the
+   API. Grep for these three when building it, or they will be quietly skipped and the
+   startup gates will not exist.
 4. **PII agent Phase 7** — CloudWatch and Windows Event Log adapters — is deferred,
    not dropped. Both reuse the proven core with no new policy or offset logic, so
    they stay cheap to pick up later.

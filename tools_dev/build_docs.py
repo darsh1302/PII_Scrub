@@ -47,6 +47,11 @@ PAGES: list[tuple[Path, Path, str]] = [
         "Functionality",
     ),
     (
+        ROOT / "docs/05-data-statement.md",
+        DASHBOARDS / "05-data-statement.html",
+        "Data statement",
+    ),
+    (
         ROOT / "docs/demo-script.md",
         DASHBOARDS / "demo-script.html",
         "Demo script",

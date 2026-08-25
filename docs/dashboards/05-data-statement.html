@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data statement · PII Scrubbing Agent</title>
+<style>
+:root {
+  --bg: #0f1419;
+  --panel: #161c24;
+  --border: #2a333f;
+  --text: #dbe4ee;
+  --muted: #8b9bb0;
+  --accent: #4db6ac;
+  --accent-dim: #26706a;
+  --code-bg: #0b0f14;
+  --warn: #e6a23c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.wrap { display: flex; min-height: 100vh; }
+nav {
+  width: 240px;
+  flex: 0 0 240px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 28px 20px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+nav .brand {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: .02em;
+  margin-bottom: 22px;
+  color: #fff;
+}
+nav a {
+  display: block;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+}
+nav a:hover { background: #1d252f; color: var(--text); }
+nav a.active {
+  background: var(--accent-dim);
+  color: #fff;
+  font-weight: 600;
+}
+main { flex: 1; min-width: 0; padding: 48px 56px 96px; max-width: 960px; }
+h1, h2, h3, h4 { color: #fff; line-height: 1.25; }
+h1 { font-size: 31px; margin: 0 0 26px; }
+h2 {
+  font-size: 22px;
+  margin: 44px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+h3 { font-size: 17px; margin: 30px 0 10px; }
+p { margin: 0 0 14px; }
+a { color: var(--accent); }
+ul, ol { margin: 0 0 14px; padding-left: 24px; }
+li { margin-bottom: 6px; }
+strong { color: #fff; }
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font: 13.5px/1.5 "Cascadia Code", Consolas, ui-monospace, monospace;
+  color: #9ad9d1;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-dim);
+  border-radius: 6px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 0 0 18px;
+}
+pre code { background: none; border: 0; padding: 0; color: #cfe3e0; }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 20px;
+  font-size: 14.5px;
+  display: block;
+  overflow-x: auto;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 9px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+th { background: #1d252f; color: #fff; font-weight: 600; }
+tr:nth-child(even) td { background: #131922; }
+blockquote {
+  margin: 0 0 18px;
+  padding: 10px 16px;
+  border-left: 3px solid var(--warn);
+  background: #1d1a14;
+  color: #e8d9bd;
+}
+hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+pre.mermaid {
+  background: #f7fbfa;
+  border-left-color: var(--accent);
+  text-align: center;
+}
+footer {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 860px) {
+  .wrap { flex-direction: column; }
+  nav { width: 100%; flex: none; height: auto; position: static; }
+  main { padding: 28px 20px 64px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <div class="brand">🛡️ PII Scrubbing Agent</div>
+  <a href="README.html">Overview</a>
+  <a href="01-how-it-works.html">How it works</a>
+  <a href="02-architecture-and-flow.html">Architecture</a>
+  <a href="03-setup.html">Setup</a>
+  <a href="04-functionality-and-prompts.html">Functionality</a>
+  <a href="05-data-statement.html" class="active">Data statement</a>
+  <a href="demo-script.html">Demo script</a>
+</nav>
+<main>
+<h1>What the platform stores, and where</h1>
+<p><strong>Generated from <code>explorer/storage/classification.py</code>. Do not edit by hand.</strong>
+Run <code>python tools_dev/build_data_statement.py</code> after changing the registry;
+<code>tests/explorer/storage/test_data_statement.py</code> fails if this file is stale.</p>
+<p>Requirement 14.8. Every persisted category is classified as content, derived
+metadata, configuration or telemetry (<code>[R14.1]</code>), and the classification
+decides both where the data lives and which retention clock governs it.</p>
+<h2>Encryption at rest (<code>[R14.2]</code>)</h2>
+<p>Named rather than implied, and it differs by store.</p>
+<ul>
+<li><strong>Postgres</strong> — whole-volume encryption provided by the operating system.
+This platform does not encrypt individual columns, so on an unencrypted
+volume the rows are plaintext on disk.</li>
+<li><strong>Object store, filesystem adapter</strong> — the same. It is the
+local-development adapter.</li>
+<li><strong>Object store, S3 adapter</strong> — server-side encryption, requested explicitly
+on every <code>put</code> rather than relying on a bucket default, because a bucket
+default is a setting someone else can change.</li>
+<li><strong>Audit chain</strong> — not encrypted. It holds identifiers and counts by
+contract, enforced at write time.</li>
+</ul>
+<p>Application-level envelope encryption is deliberately absent: it would put a
+key in the same process as the ciphertext it protects, which buys less than it
+appears to. The honest position is to name what the platform relies on so an
+operator can verify it.</p>
+<h2>Categories</h2>
+<h3>Content</h3>
+<p>May contain sensitive data. Retention is configurable per workspace and startup refuses when a period is missing (<code>[R14.3]</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Store</th>
+<th>Retention</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chunk_text</code></td>
+<td>object_store</td>
+<td>follows_source</td>
+<td>A chunk is a substring of its document, so it is exactly as sensitive. It follows the document rather than holding a clock of its own, which would let a copy outlive the original.</td>
+</tr>
+<tr>
+<td><code>document</code></td>
+<td>object_store</td>
+<td>policy_per_workspace</td>
+<td>Uploaded source text. In the object store rather than Postgres so deleting a large payload does not rewrite a table, and so [R14.4] can put originals on a different clock from sanitized output.</td>
+</tr>
+<tr>
+<td><code>embedding</code></td>
+<td>postgres</td>
+<td>follows_source</td>
+<td>Classified as content, not as derived metadata, because embedding inversion recovers substantial source text [R4.8]. In Postgres because similarity and the workspace predicate must be one SQL statement [R15.3].</td>
+</tr>
+<tr>
+<td><code>sanitized_artifact</code></td>
+<td>object_store</td>
+<td>policy_per_workspace</td>
+<td>Scrubbed output. [R14.4] requires a clock independent of the original: the reason to keep a redacted copy for review rarely applies to the source it came from.</td>
+</tr>
+<tr>
+<td><code>token_vault_mapping</code></td>
+<td>postgres</td>
+<td>policy_per_workspace</td>
+<td>Surrogate-to-value mappings are plaintext PII by definition. Encrypted at rest and separately retained; task 13 builds it. Registered now so the schema cannot add it unclassified later.</td>
+</tr>
+</tbody>
+</table>
+<h3>Derived metadata</h3>
+<p>Counts, scores, offsets and entity types. No values, by contract.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Store</th>
+<th>Retention</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>audit_record</code></td>
+<td>audit_chain</td>
+<td>survives_deletion</td>
+<td>Hash-chained JSONL rather than a table, because a row the application can rewrite is not tamper-evident. Not foreign-keyed to content, so it survives the deletion it records [R14.6].</td>
+</tr>
+<tr>
+<td><code>chunk_metadata</code></td>
+<td>postgres</td>
+<td>follows_source</td>
+<td>Offsets, token counts and sequence. Offsets are not values, but they locate values in a document, so they are useless once the document is gone and are deleted with it.</td>
+</tr>
+<tr>
+<td><code>finding_metadata</code></td>
+<td>postgres</td>
+<td>follows_source</td>
+<td>Entity types, counts, confidence and the detector that fired. Carries no raw value by contract — the same contract the PII service response is shaped around [R11.5].</td>
+</tr>
+<tr>
+<td><code>run_metrics</code></td>
+<td>postgres</td>
+<td>indefinite</td>
+<td>Tokens, cost, latency and completion reason. The comparison lab exists to show change over time, which needs history.</td>
+</tr>
+</tbody>
+</table>
+<h3>Configuration</h3>
+<p>Settings and definitions. Retained until explicitly removed.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Store</th>
+<th>Retention</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>approval</code></td>
+<td>postgres</td>
+<td>indefinite</td>
+<td>Approver identity, decision and the exact executed parameters [R10.4]. An approval record that can expire is not a record.</td>
+</tr>
+<tr>
+<td><code>experiment</code></td>
+<td>postgres</td>
+<td>indefinite</td>
+<td>A saved lab configuration and its purpose. No content.</td>
+</tr>
+<tr>
+<td><code>identity</code></td>
+<td>postgres</td>
+<td>indefinite</td>
+<td>Users and memberships. Password verifiers are held here; the secrets [R15.7] refers to are provider credentials, which are never persisted by us.</td>
+</tr>
+<tr>
+<td><code>price_table</code></td>
+<td>postgres</td>
+<td>indefinite</td>
+<td>Versioned pricing; a run records the version it used [R1.8], so removing a version would make a historical cost figure unverifiable.</td>
+</tr>
+<tr>
+<td><code>prompt_template</code></td>
+<td>postgres</td>
+<td>indefinite</td>
+<td>Versioned, and a run references a specific version [R2.1]. Deleting a version would make an old run unexplainable.</td>
+</tr>
+<tr>
+<td><code>retention_policy</code></td>
+<td>postgres</td>
+<td>indefinite</td>
+<td>The policy cannot be governed by itself. Startup reads it to decide whether to run at all [R14.3].</td>
+</tr>
+<tr>
+<td><code>workspace</code></td>
+<td>postgres</td>
+<td>indefinite</td>
+<td>The isolation boundary itself. Removed only by explicit deletion, which cascades to everything it owns [R14.5].</td>
+</tr>
+</tbody>
+</table>
+<h3>Telemetry</h3>
+<p>Redacted before persistence (<code>[R6.8]</code>), and still on a retention clock — redaction reduces exposure, it does not eliminate it.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Store</th>
+<th>Retention</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>session</code></td>
+<td>postgres</td>
+<td>policy_per_workspace</td>
+<td>Telemetry rather than configuration, because a session row records that a named person was active at a given time — which is a fact about behaviour, not a setting. It therefore gets a clock: identity is retained indefinitely, a record of when someone logged in is not. Holds only the token's SHA-256, so a database read yields nothing replayable.</td>
+</tr>
+<tr>
+<td><code>trace_event</code></td>
+<td>postgres</td>
+<td>policy_per_workspace</td>
+<td>Redacted on the write path, not at render time [R6.8], so the store never holds a raw value. Still on a retention clock: redaction reduces exposure, it does not eliminate it.</td>
+</tr>
+</tbody>
+</table>
+<h2>Tables</h2>
+<p>Which classification governs each table. Asserted against a live database by
+<code>tests/explorer/storage/test_classification.py</code>, so a table cannot exist here
+without an answer to the question of when its data is deleted.</p>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app_user</code></td>
+<td><code>identity</code></td>
+</tr>
+<tr>
+<td><code>approval</code></td>
+<td><code>approval</code></td>
+</tr>
+<tr>
+<td><code>chunk</code></td>
+<td><code>chunk_metadata</code></td>
+</tr>
+<tr>
+<td><code>document</code></td>
+<td><code>document</code></td>
+</tr>
+<tr>
+<td><code>embedding</code></td>
+<td><code>embedding</code></td>
+</tr>
+<tr>
+<td><code>experiment</code></td>
+<td><code>experiment</code></td>
+</tr>
+<tr>
+<td><code>membership</code></td>
+<td><code>identity</code></td>
+</tr>
+<tr>
+<td><code>price_table</code></td>
+<td><code>price_table</code></td>
+</tr>
+<tr>
+<td><code>prompt_template</code></td>
+<td><code>prompt_template</code></td>
+</tr>
+<tr>
+<td><code>prompt_template_version</code></td>
+<td><code>prompt_template</code></td>
+</tr>
+<tr>
+<td><code>retention_policy</code></td>
+<td><code>retention_policy</code></td>
+</tr>
+<tr>
+<td><code>run</code></td>
+<td><code>run_metrics</code></td>
+</tr>
+<tr>
+<td><code>tool_invocation</code></td>
+<td><code>run_metrics</code></td>
+</tr>
+<tr>
+<td><code>trace_event</code></td>
+<td><code>trace_event</code></td>
+</tr>
+<tr>
+<td><code>user_session</code></td>
+<td><code>session</code></td>
+</tr>
+<tr>
+<td><code>workspace</code></td>
+<td><code>workspace</code></td>
+</tr>
+</tbody>
+</table>
+<p>Not every category has a table, which is intentional. Document and artifact
+payloads live in the object store, with Postgres holding only metadata and a
+reference. Chunk text is likewise a payload. The audit trail is hash-chained
+JSONL rather than a table, because a row the application can rewrite is not
+tamper-evident and <code>[R14.6]</code> needs audit records to outlive the data they
+describe.</p>
+<h2>Deletion (<code>[R14.5]</code>, <code>[R14.6]</code>)</h2>
+<p>Deleting a document removes its chunks, embeddings and object-store payloads.
+Deleting a workspace removes everything it owns, in both stores. Payloads are
+removed <em>before</em> rows: the residual failure mode is then a row pointing at a
+missing payload, which is visible and recoverable, rather than bytes on disk
+with nothing referencing them.</p>
+<p>Every deletion writes a record to the audit chain, including a deletion that
+failed partway — that is the case most needing intervention, so it is the
+last case that should lack evidence. The record carries identifiers and
+counts, never a label or content.</p>
+<h2>Retention periods required at startup</h2>
+<p>Derived from the registry, not listed separately, so a new content category
+acquires the requirement by being classified as content:</p>
+<ul>
+<li><code>document</code></li>
+<li><code>sanitized_artifact</code></li>
+<li><code>session</code></li>
+<li><code>token_vault_mapping</code></li>
+<li><code>trace_event</code></li>
+</ul>
+<h2>What the platform never persists</h2>
+<ul>
+<li><strong>Provider credentials and API keys</strong> (<code>[R15.7]</code>). Read from the
+environment or a secret provider, never written to a table, a trace or a
+prompt.</li>
+<li><strong>Session bearer tokens.</strong> Only their SHA-256, so a database read yields
+nothing replayable.</li>
+<li><strong>Entity values in traces or audit records.</strong> Redaction happens on the write
+path, and forbidden field names are rejected at write time rather than
+trusted to review.</li>
+</ul>
+
+<footer>Generated from 05-data-statement.md by <code>tools_dev/build_docs.py</code>. The Markdown is the source of truth.</footer>
+</main>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+</script>
+</body>
+</html>

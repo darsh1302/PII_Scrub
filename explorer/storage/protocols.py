@@ -99,6 +99,25 @@ class ObjectStore(Protocol):
 
 
 @runtime_checkable
+class AuditWriter(Protocol):
+    """The narrow slice of the audit chain that deletion needs.
+
+    Declared here rather than importing
+    :class:`explorer.observability.audit_chain.AuditChain`, because rule D8 makes
+    storage the bottom layer and observability sits above it.
+
+    That rule caught this the moment it was written, which is the point of having it.
+    The alternative — storage importing observability — would have run fine and would
+    have meant a change to trace-event handling could break document deletion. Storage
+    declares what it requires; the composition root supplies it.
+    """
+
+    def append(self, record: dict[str, object]) -> str:
+        """Persist a record durably and return its hash."""
+        ...
+
+
+@runtime_checkable
 class WorkspaceRepository(Protocol):
     """The one repository without a ``workspace_id`` parameter, being the table
     that defines it."""

@@ -296,35 +296,41 @@ Task detail follows by phase. Checkboxes reflect real progress.
 
 ## Phase 3 — Retention and deletion
 
-- [ ] 4. Make retention a startup precondition, not a policy document
+- [x] 4. Make retention a startup precondition, not a policy document
   - _Requirements: 14.2, 14.3, 14.4, 14.5, 14.6, 14.7, 14.8_
   - _Properties: P8, P11, P14, P15_
 
-- [ ] 4.1 Implement the retention policy table and startup validation
+- [x] 4.1 Implement the retention policy table and startup validation
   - One row per workspace per content category; startup refuses when a category has none
   - Original documents and sanitized artifacts on independently configurable clocks
   - _Requirements: 14.3, 14.4_
   - _Properties: P8_
 
-- [ ] 4.2 Implement cascade deletion
+- [x] 4.2a Ordering decision: payloads before rows
+  - Deliberate, and the opposite of what feels natural. Rows-first then a payload failure leaves bytes on disk with nothing referencing them, no workspace to attribute them to, and no way to find them except by walking the store — content surviving its own deletion. Payloads-first then a row failure leaves a row pointing at a missing payload: visible, attributable, and fixed by re-running. The residual failure mode is chosen rather than accepted, and it is the recoverable one
+  - The audit record is written last and always, including on partial failure. A record claiming a deletion that then failed is worse than none; but the partial case is the one needing intervention, so it is the last case that should lack evidence
+  - _Requirements: 14.5, 14.6_
+  - _Properties: P14, P15_
+
+- [x] 4.2 Implement cascade deletion
   - Deleting a document removes its chunks, embeddings, object-store payload and any cached derivative; deleting a workspace removes everything it owns
   - _Requirements: 14.5_
   - _Properties: P14_
 
-- [ ] 4.3 Implement the retention sweeper
+- [x] 4.3 Implement the retention sweeper
   - Follows the existing `sweep_idle_sessions` and `sweep_orphan_temp_dirs` pattern — retention that depends on someone remembering is not retention
   - _Requirements: 14.3_
 
-- [ ] 4.4 Audit deletions durably
+- [x] 4.4 Audit deletions durably
   - Deletion writes an audit record; the record is not foreign-keyed to the deleted data and survives it
   - _Requirements: 14.6_
   - _Properties: P15_
 
-- [ ] 4.5 Document what is stored and where
+- [x] 4.5 Document what is stored and where
   - A maintained statement covering each category, its store, its retention period and its deletion path
   - _Requirements: 14.8_
 
-- [ ] 4.6 Write retention tests, including a property test
+- [x] 4.6 Write retention tests, including a property test
   - Property: the sweeper never deletes data inside its retention window, for arbitrary policy periods and timestamps
   - Cascade completeness: after deleting a document, no chunk, embedding or payload referencing it remains
   - _Requirements: 14.3, 14.5_
