@@ -220,7 +220,13 @@ if __name__ == "__main__":
     import sys
 
     target = int(sys.argv[1]) if len(sys.argv) > 1 else 200_000
-    out = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("sample_large.txt")
+    default_out = Path(__file__).resolve().parent.parent / "data" / "samples"
+    out = (
+        Path(sys.argv[2])
+        if len(sys.argv) > 2
+        else default_out / "sample_large.txt"
+    )
+    out.parent.mkdir(parents=True, exist_ok=True)
     body = generate(target)
     out.write_text(body, encoding="utf-8", newline="")
     print(

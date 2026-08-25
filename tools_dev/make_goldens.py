@@ -31,12 +31,12 @@ load_dotenv()
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from core.file_source import load_file  # noqa: E402
-from core.pipeline import ScanOptions, scan  # noqa: E402
-from models.enums import Destination  # noqa: E402
-from models.results import EngineVersions  # noqa: E402
-from session.context import get_session_context  # noqa: E402
-from utils.config import Settings  # noqa: E402
+from pii_agent.core.file_source import load_file  # noqa: E402
+from pii_agent.core.pipeline import ScanOptions, scan  # noqa: E402
+from pii_agent.models.enums import Destination  # noqa: E402
+from pii_agent.models.results import EngineVersions  # noqa: E402
+from pii_agent.session.context import get_session_context  # noqa: E402
+from pii_agent.utils.config import Settings  # noqa: E402
 
 FIXTURES = ROOT / "tests" / "fixtures"
 GOLDEN_DIR = FIXTURES / "golden"
@@ -67,7 +67,7 @@ def build_session(root: Path):
         openai_api_key="sk-golden",
         token_vault_salt=b"golden-fixed-salt-for-reproducibility",
         scan_roots=(root.resolve(),),
-        audit_dir=ROOT / "audit",
+        audit_dir=ROOT / "var" / "audit",
     )
     return get_session_context("golden-generator", settings)
 

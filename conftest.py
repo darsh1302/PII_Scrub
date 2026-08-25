@@ -13,8 +13,8 @@ ROOT = Path(__file__).parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from session.context import reset_all_sessions, reset_shared_engines  # noqa: E402
-from utils.config import Settings  # noqa: E402
+from pii_agent.session.context import reset_all_sessions, reset_shared_engines  # noqa: E402
+from pii_agent.utils.config import Settings  # noqa: E402
 
 # Presidio logs a warning per non-English recognizer it declines to register,
 # on every engine construction. Dozens of lines that say nothing about our code.

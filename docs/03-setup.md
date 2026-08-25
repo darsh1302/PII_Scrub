@@ -28,7 +28,7 @@ Every dependency is exact-pinned, including the spaCy model, which is installed
 from a wheel URL rather than via `spacy download`. That is a correctness
 requirement rather than housekeeping: engine and model versions are recorded in
 every audit record, so a floating version would make a historical result
-non-reproducible. `tests/test_dependency_pins.py` enforces it.
+non-reproducible. `tests/pii_agent/test_dependency_pins.py` enforces it.
 
 Key dependencies:
 
@@ -122,14 +122,13 @@ CloudWatch source.
 Create the working directories referenced by your `.env`:
 
 ```bat
-mkdir scan_workspace
-mkdir audit
+mkdir var\audit
 ```
 
 ## Run
 
 ```bat
-venv\Scripts\streamlit run app.py --server.address 127.0.0.1
+venv\Scripts\streamlit run apps/pii_agent_app.py --server.address 127.0.0.1
 ```
 
 Then open `http://127.0.0.1:8501`.
@@ -148,14 +147,14 @@ venv\Scripts\python -m pytest tests\ -q
 
 | Suite | Focus |
 |---|---|
-| `tests/unit/` | Module-level behaviour |
-| `tests/security/` | Trust boundary, content gate, sandbox, fail-closed gates |
-| `tests/property/` | Hypothesis: offset consistency, policy monotonicity, clean output |
-| `tests/integration/` | End-to-end pipeline with no LLM |
+| `tests/pii_agent/unit/` | Module-level behaviour |
+| `tests/pii_agent/security/` | Trust boundary, content gate, sandbox, fail-closed gates |
+| `tests/pii_agent/property/` | Hypothesis: offset consistency, policy monotonicity, clean output |
+| `tests/pii_agent/integration/` | End-to-end pipeline with no LLM |
 
-Branch coverage is held at 100% on the security-critical modules: `core/policy.py`,
-`core/reconciler.py`, `models/coverage.py`, `utils/paths.py`,
-`session/allowlist.py`.
+Branch coverage is held at 100% on the security-critical modules: `pii_agent/core/policy.py`,
+`pii_agent/core/reconciler.py`, `pii_agent/models/coverage.py`, `pii_agent/utils/paths.py`,
+`pii_agent/session/allowlist.py`.
 
 ## Sample data
 
@@ -163,15 +162,15 @@ Two generated files are included:
 
 | File | Size | Scan time |
 |---|---|---|
-| `sample.txt` | 3.3 KB | ~5 s |
-| `sample_large.txt` | 260 KB | ~110 s |
+| `data/samples/sample.txt` | 3.3 KB | ~5 s |
+| `data/samples/sample_large.txt` | 260 KB | ~110 s |
 
 Both contain planted PII, credentials, and deliberate prompt-injection payloads so
 that a scan exercises the injection scanner against real input. Generate another
 size with:
 
 ```bat
-venv\Scripts\python tools_dev\make_big_sample.py 500000 scan_workspace\bigger.txt
+venv\Scripts\python tools_dev\make_big_sample.py 500000 data\samples\bigger.txt
 ```
 
 Uploading through the UI bypasses the scan-root allowlist, since you supplied the
@@ -214,7 +213,7 @@ account before sharing the URL.
 
 ## Development notes
 
-Restart Streamlit after editing `agent/prompts.py` or `agent/graph.py`.
+Restart Streamlit after editing `pii_agent/agent/prompts.py` or `pii_agent/agent/graph.py`.
 `_runtime_for` is decorated `@st.cache_resource` and `AgentRuntime` builds the
 system prompt in its constructor, so cached resources survive script reruns and
 prompt edits will not take effect. The sidebar reset button clears the cache too.

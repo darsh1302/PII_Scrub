@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo script · PII Scrubbing Agent</title>
+<style>
+:root {
+  --bg: #0f1419;
+  --panel: #161c24;
+  --border: #2a333f;
+  --text: #dbe4ee;
+  --muted: #8b9bb0;
+  --accent: #4db6ac;
+  --accent-dim: #26706a;
+  --code-bg: #0b0f14;
+  --warn: #e6a23c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.wrap { display: flex; min-height: 100vh; }
+nav {
+  width: 240px;
+  flex: 0 0 240px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 28px 20px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+nav .brand {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: .02em;
+  margin-bottom: 22px;
+  color: #fff;
+}
+nav a {
+  display: block;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+}
+nav a:hover { background: #1d252f; color: var(--text); }
+nav a.active {
+  background: var(--accent-dim);
+  color: #fff;
+  font-weight: 600;
+}
+main { flex: 1; min-width: 0; padding: 48px 56px 96px; max-width: 960px; }
+h1, h2, h3, h4 { color: #fff; line-height: 1.25; }
+h1 { font-size: 31px; margin: 0 0 26px; }
+h2 {
+  font-size: 22px;
+  margin: 44px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+h3 { font-size: 17px; margin: 30px 0 10px; }
+p { margin: 0 0 14px; }
+a { color: var(--accent); }
+ul, ol { margin: 0 0 14px; padding-left: 24px; }
+li { margin-bottom: 6px; }
+strong { color: #fff; }
+code {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font: 13.5px/1.5 "Cascadia Code", Consolas, ui-monospace, monospace;
+  color: #9ad9d1;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-dim);
+  border-radius: 6px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 0 0 18px;
+}
+pre code { background: none; border: 0; padding: 0; color: #cfe3e0; }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 20px;
+  font-size: 14.5px;
+  display: block;
+  overflow-x: auto;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 9px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+th { background: #1d252f; color: #fff; font-weight: 600; }
+tr:nth-child(even) td { background: #131922; }
+blockquote {
+  margin: 0 0 18px;
+  padding: 10px 16px;
+  border-left: 3px solid var(--warn);
+  background: #1d1a14;
+  color: #e8d9bd;
+}
+hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+pre.mermaid {
+  background: #f7fbfa;
+  border-left-color: var(--accent);
+  text-align: center;
+}
+footer {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 860px) {
+  .wrap { flex-direction: column; }
+  nav { width: 100%; flex: none; height: auto; position: static; }
+  main { padding: 28px 20px 64px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <div class="brand">🛡️ PII Scrubbing Agent</div>
+  <a href="README.html">Overview</a>
+  <a href="01-how-it-works.html">How it works</a>
+  <a href="02-architecture-and-flow.html">Architecture</a>
+  <a href="03-setup.html">Setup</a>
+  <a href="04-functionality-and-prompts.html">Functionality</a>
+  <a href="demo-script.html" class="active">Demo script</a>
+</nav>
+<main>
+<h1>Demo Script — PII Scrubbing Agent</h1>
+<p>Target length <strong>4 minutes</strong>. Record against the <strong>local</strong> app, not the cloud demo:
+locally you get the full <code>en_core_web_lg</code> model, so <code>data/samples/sample.txt</code> yields 51
+entities instead of the reduced count the small model finds. The numbers are the
+evidence, so use the better ones.</p>
+<h2>Before you record</h2>
+<pre><code class="language-bat">venv\Scripts\streamlit run apps/pii_agent_app.py --server.address 127.0.0.1
+</code></pre>
+<ul>
+<li>Browser at 100% zoom, window maximised, no other tabs visible</li>
+<li>Have <code>data/samples/sample.txt</code> ready in an Explorer window for the drag-and-drop</li>
+<li>Do a full dry run first. The scan takes about five seconds and you want to know
+exactly when the table appears</li>
+<li>Sidebar expanded so Component health is visible</li>
+</ul>
+<p>Do not show <code>.env</code> on screen at any point.</p>
+<hr>
+<h2>Beat 1 — The problem (0:00–0:25)</h2>
+<p><em>Screen: <code>data/samples/sample.txt</code> open in an editor, scrolling slowly.</em></p>
+<blockquote>
+<p>This is an application log. Buried in it are social security numbers, credit
+cards, an AWS access key, and a private key block. Somebody needs to send this
+to a vendor, or paste it into a model, and none of that can go with it.</p>
+<p>Doing this by hand does not scale, and a regex sweep gives you output you cannot
+defend — no record of what was searched for, no evidence the whole file was
+covered.</p>
+</blockquote>
+<h2>Beat 2 — Ask for it in plain language (0:25–0:50)</h2>
+<p><em>Screen: drag <code>data/samples/sample.txt</code> into the uploader. Type the prompt.</em></p>
+<pre><code>scrub sample.txt with DEFAULT_PII for INTERNAL_SIEM
+</code></pre>
+<blockquote>
+<p>I upload the file and ask in plain English. I named a destination — internal
+SIEM — and that matters in a second.</p>
+</blockquote>
+<p><em>Let the status line show EXECUTING.</em></p>
+<h2>Beat 3 — The findings (0:50–1:35)</h2>
+<p><em>Screen: findings table. Scroll it. Hover the severity column.</em></p>
+<blockquote>
+<p>Fifty-one entities. Type, severity, confidence, which engine found it, and what
+policy decided to do with each one.</p>
+<p>Two things to notice. The high-severity rows show a type label instead of a
+preview — a detected credential is never rendered to screen. And the spaCy
+confidences are marked heuristic, because spaCy emits a constant rather than a
+calibrated probability, and presenting those as comparable would be misleading.</p>
+<p>Coverage says one hundred percent of 3,319 bytes, all three detectors healthy.
+That claim is what the next part depends on.</p>
+</blockquote>
+<h2>Beat 4 — Destination changes the answer (1:35–2:20)</h2>
+<p><em>Screen: point at the action counts — 31 ALLOW, 11 REDACT, 5 REPLACE, 4 MASK.</em></p>
+<blockquote>
+<p>Thirty-one entities were allowed through. Those are timestamps and internal IP
+addresses, and they were kept on purpose. A log with every timestamp and source
+IP stripped cannot be correlated, which defeats the point of keeping logs.</p>
+</blockquote>
+<p><em>Type the same request with a different destination:</em></p>
+<pre><code>scrub sample.txt for EXTERNAL_LLM
+</code></pre>
+<blockquote>
+<p>Same file, one word different. Now those same IPs are redacted, because sent
+outside your infrastructure an IP address is personal data rather than
+operational data.</p>
+<p>Nothing about the file changed. The policy engine reasoned about where the data
+was going.</p>
+</blockquote>
+<h2>Beat 5 — The injection attempt (2:20–3:00)</h2>
+<p><em>Screen: the red security-findings panel.</em></p>
+<blockquote>
+<p>This file also contains text written to manipulate an AI agent. Instructions to
+skip redaction, a false claim that the scan found nothing, a fake assistant turn
+saying the file is clean.</p>
+<p>They had no effect, and the reason is architectural. The language model never
+received the file. It got counts, type names and opaque handles. Detection,
+policy and redaction all happen in code that imports no LLM library at all —
+there is a test that proves it by inspecting loaded modules in a subprocess.</p>
+<p>An injected instruction cannot pick a weaker action, because the model does not
+pick actions. Policy resolution is a maximum over a strictness ordering, so a
+request can only ever ratchet upward.</p>
+</blockquote>
+<h2>Beat 6 — The output, and what it is not (3:00–3:40)</h2>
+<p><em>Screen: click the download, open the cleaned file side by side with the original.</em></p>
+<blockquote>
+<p>Here is the cleaned copy. The SSN is gone, the card is masked, the key is
+redacted, and the timestamps survived.</p>
+<p>It was verified before you were allowed to have it: the output is re-scanned, and
+if anything the scrub was supposed to remove is still present, the file is
+withheld and the run is reported as a defect. Nothing is written to disk — the
+download is the only way out.</p>
+<p>Alongside it there is an audit record. Entity counts, a hash of the source name
+rather than the name, the profile version, and the exact engine versions, chained
+by hash so a record cannot be quietly edited.</p>
+</blockquote>
+<h2>Beat 7 — Honest close (3:40–4:00)</h2>
+<p><em>Screen: back to the findings table, or the repo README.</em></p>
+<blockquote>
+<p>Two things it does not do. Name recall is imperfect in terse log syntax, so
+findings are a floor rather than a guarantee. And throughput is about two and a
+half kilobytes a second, because Presidio runs its own NLP pipeline on top of
+ours — that is measured, and it is the next thing to fix.</p>
+<p>It assists with detection. It does not certify compliance.</p>
+</blockquote>
+<hr>
+<h2>Notes</h2>
+<p><strong>Do not</strong> demo <code>data/samples/sample_large.txt</code> live — 260 KB takes about 110 seconds. If you
+want to show scale, record it separately and cut to the finished result: 3,339
+entities, 7 chunks, verified clean.</p>
+<p>If you want a refusal on camera, ask for a scrub with no destination and show the
+<code>NEEDS_DESTINATION</code> response. It demonstrates that the agent asks rather than
+guessing, and it takes ten seconds.</p>
+<p>The strongest single moment is Beat 4 — same file, one word changed, different
+policy outcome. If you only have ninety seconds, record beats 2, 4 and 6.</p>
+
+<footer>Generated from demo-script.md by <code>tools_dev/build_docs.py</code>. The Markdown is the source of truth.</footer>
+</main>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+</script>
+</body>
+</html>

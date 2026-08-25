@@ -2,8 +2,8 @@
 
 ## Layer map
 
-The package boundaries are the trust boundaries. Nothing in `core/` may import
-from `agent/` or `tools/`, and that direction is enforced by test.
+The package boundaries are the trust boundaries. Nothing in `pii_agent/core/` may import
+from `pii_agent/agent/` or `pii_agent/tools/`, and that direction is enforced by test.
 
 ```mermaid
 graph TD
@@ -39,39 +39,39 @@ LLM-free.
 
 | Path | Responsibility |
 |---|---|
-| `app.py` | Streamlit entry point: upload, transcript, turn loop, result rendering |
-| `ui/presenters.py` | Presentation logic with no Streamlit import, so it is testable |
-| `ui/streamlit_render.py` | The drawing layer: findings table, refusals, downloads |
-| `ui/health.py` | Startup and dependency health panel |
-| `agent/graph.py` | `AgentRuntime`: LangGraph reasoning loop, budgets, tool dispatch |
-| `agent/prompts.py` | System prompt, including what the agent cannot do |
-| `agent/memory.py` | Transcript redaction, windowing, reference resolution |
-| `agent/state.py` | `AgentState` typed dict and per-turn reset |
-| `tools/agent_tools.py` | The six tools, source resolution, budget enforcement |
-| `core/pipeline.py` | `scan` and `scrub`, and the three fail-closed gates |
-| `core/file_source.py` | Ingestion: decode, parse, store, return a handle |
-| `core/chunker.py` | Structural chunking with global offset mapping |
-| `core/detector.py` | Runs the three detection engines |
-| `core/recognizers.py` | 25 custom credential and secret recognizers |
-| `core/reconciler.py` | Overlap resolution by credibility |
-| `core/policy.py` | `PolicyEngine`: the monotonic ratchet |
-| `core/applier.py` | Right-to-left replacement |
-| `core/verifier.py` | Post-scrub re-scan |
-| `core/injection_scan.py` | Prompt-injection pattern detection, reported not enforced |
-| `core/profile_resolver.py` | Profile loading, inheritance, conflict resolution |
-| `models/` | `Entity`, `Decision`, `DecisionSet`, `ProcessingResult`, `CoverageLedger`, enums |
-| `session/context.py` | `SessionContext`: owns every mutable per-session store |
-| `session/content_store.py` | Opaque handles; content never leaves the process |
-| `session/token_vault.py` | Reversible tokenization and salted hashing |
-| `session/audit_sink.py` | Append-only hash-chained JSONL |
-| `session/allowlist.py` | Per-session false-positive suppression |
-| `profiles/*.yaml` | Policy as data |
-| `profiles/schema.py` | Profile validation, including forbidden action combinations |
-| `utils/paths.py` | Sandbox containment with post-open verification |
-| `utils/content_gate.py` | The only sanctioned path from core to the model |
-| `utils/budgets.py` | Per-tool and per-turn wall-clock budgets |
-| `utils/safe_parsers.py` | `defusedxml`-backed JSON/CSV/XML parsing |
-| `utils/normalization.py` | Unicode normalization with an offset map back to the original |
+| `apps/pii_agent_app.py` | Streamlit entry point: upload, transcript, turn loop, result rendering |
+| `pii_agent/ui/presenters.py` | Presentation logic with no Streamlit import, so it is testable |
+| `pii_agent/ui/streamlit_render.py` | The drawing layer: findings table, refusals, downloads |
+| `pii_agent/ui/health.py` | Startup and dependency health panel |
+| `pii_agent/agent/graph.py` | `AgentRuntime`: LangGraph reasoning loop, budgets, tool dispatch |
+| `pii_agent/agent/prompts.py` | System prompt, including what the agent cannot do |
+| `pii_agent/agent/memory.py` | Transcript redaction, windowing, reference resolution |
+| `pii_agent/agent/state.py` | `AgentState` typed dict and per-turn reset |
+| `pii_agent/tools/agent_tools.py` | The six tools, source resolution, budget enforcement |
+| `pii_agent/core/pipeline.py` | `scan` and `scrub`, and the three fail-closed gates |
+| `pii_agent/core/file_source.py` | Ingestion: decode, parse, store, return a handle |
+| `pii_agent/core/chunker.py` | Structural chunking with global offset mapping |
+| `pii_agent/core/detector.py` | Runs the three detection engines |
+| `pii_agent/core/recognizers.py` | 25 custom credential and secret recognizers |
+| `pii_agent/core/reconciler.py` | Overlap resolution by credibility |
+| `pii_agent/core/policy.py` | `PolicyEngine`: the monotonic ratchet |
+| `pii_agent/core/applier.py` | Right-to-left replacement |
+| `pii_agent/core/verifier.py` | Post-scrub re-scan |
+| `pii_agent/core/injection_scan.py` | Prompt-injection pattern detection, reported not enforced |
+| `pii_agent/core/profile_resolver.py` | Profile loading, inheritance, conflict resolution |
+| `pii_agent/models/` | `Entity`, `Decision`, `DecisionSet`, `ProcessingResult`, `CoverageLedger`, enums |
+| `pii_agent/session/context.py` | `SessionContext`: owns every mutable per-session store |
+| `pii_agent/session/content_store.py` | Opaque handles; content never leaves the process |
+| `pii_agent/session/token_vault.py` | Reversible tokenization and salted hashing |
+| `pii_agent/session/audit_sink.py` | Append-only hash-chained JSONL |
+| `pii_agent/session/allowlist.py` | Per-session false-positive suppression |
+| `pii_agent/profiles/*.yaml` | Policy as data |
+| `pii_agent/profiles/schema.py` | Profile validation, including forbidden action combinations |
+| `pii_agent/utils/paths.py` | Sandbox containment with post-open verification |
+| `pii_agent/utils/content_gate.py` | The only sanctioned path from core to the model |
+| `pii_agent/utils/budgets.py` | Per-tool and per-turn wall-clock budgets |
+| `pii_agent/utils/safe_parsers.py` | `defusedxml`-backed JSON/CSV/XML parsing |
+| `pii_agent/utils/normalization.py` | Unicode normalization with an offset map back to the original |
 
 ## Request flow
 
@@ -114,7 +114,7 @@ crossing, validated structurally rather than by convention.
 
 ## The content gate
 
-`utils/content_gate.py` checks every payload bound for the model against a
+`pii_agent/utils/content_gate.py` checks every payload bound for the model against a
 forbidden-key set: `content`, `text`, `value`, `matched_text`, `entity_text`,
 `start`, `end`, `span`, `offset`, `positions`, `original`, `document` and others.
 The check is structural and recursive, because the failure mode is silent — a
@@ -161,7 +161,7 @@ labels like `card=`, not values.
 
 ## Policy resolution
 
-`core/policy.py` resolves each entity to exactly one action through a lattice:
+`pii_agent/core/policy.py` resolves each entity to exactly one action through a lattice:
 
 ```
 ALLOW < REPLACE < MASK < HASH < TOKENIZE < REDACT < BLOCK
@@ -172,7 +172,7 @@ profile's action for the type, any destination-specific override, and any action
 the user requested. Because it is a `max`, a request can only ratchet upward.
 This is what contains the blast radius of prompt injection.
 
-`profiles/schema.py` rejects `HASH` for `US_SSN`, `CREDIT_CARD`, `CVV` and `PIN`
+`pii_agent/profiles/schema.py` rejects `HASH` for `US_SSN`, `CREDIT_CARD`, `CVV` and `PIN`
 at load time. Those value spaces are small enough to exhaust — the SSN space is
 about 10⁹ — so a salted digest is pseudonymization, not anonymization.
 

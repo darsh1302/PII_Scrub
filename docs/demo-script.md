@@ -1,18 +1,18 @@
 # Demo Script — PII Scrubbing Agent
 
 Target length **4 minutes**. Record against the **local** app, not the cloud demo:
-locally you get the full `en_core_web_lg` model, so `sample.txt` yields 51
+locally you get the full `en_core_web_lg` model, so `data/samples/sample.txt` yields 51
 entities instead of the reduced count the small model finds. The numbers are the
 evidence, so use the better ones.
 
 ## Before you record
 
 ```bat
-venv\Scripts\streamlit run app.py --server.address 127.0.0.1
+venv\Scripts\streamlit run apps/pii_agent_app.py --server.address 127.0.0.1
 ```
 
 - Browser at 100% zoom, window maximised, no other tabs visible
-- Have `sample.txt` ready in an Explorer window for the drag-and-drop
+- Have `data/samples/sample.txt` ready in an Explorer window for the drag-and-drop
 - Do a full dry run first. The scan takes about five seconds and you want to know
   exactly when the table appears
 - Sidebar expanded so Component health is visible
@@ -23,7 +23,7 @@ Do not show `.env` on screen at any point.
 
 ## Beat 1 — The problem (0:00–0:25)
 
-*Screen: `sample.txt` open in an editor, scrolling slowly.*
+*Screen: `data/samples/sample.txt` open in an editor, scrolling slowly.*
 
 > This is an application log. Buried in it are social security numbers, credit
 > cards, an AWS access key, and a private key block. Somebody needs to send this
@@ -35,7 +35,7 @@ Do not show `.env` on screen at any point.
 
 ## Beat 2 — Ask for it in plain language (0:25–0:50)
 
-*Screen: drag `sample.txt` into the uploader. Type the prompt.*
+*Screen: drag `data/samples/sample.txt` into the uploader. Type the prompt.*
 
 ```
 scrub sample.txt with DEFAULT_PII for INTERNAL_SIEM
@@ -130,7 +130,7 @@ scrub sample.txt for EXTERNAL_LLM
 
 ## Notes
 
-**Do not** demo `sample_large.txt` live — 260 KB takes about 110 seconds. If you
+**Do not** demo `data/samples/sample_large.txt` live — 260 KB takes about 110 seconds. If you
 want to show scale, record it separately and cut to the finished result: 3,339
 entities, 7 chunks, verified clean.
 

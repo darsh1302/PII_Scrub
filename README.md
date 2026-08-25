@@ -47,24 +47,24 @@ Fill in `.env`. Generate the salt with
 ```dotenv
 OPENAI_API_KEY=sk-...
 PII_AGENT_TOKEN_VAULT_SALT=<64 hex characters>
-PII_AGENT_SCAN_ROOTS=<absolute path to scan_workspace>
+PII_AGENT_SCAN_ROOTS=<absolute path to var\scan_workspace>
 ```
 
 Run it:
 
 ```bat
-mkdir audit
-venv\Scripts\streamlit run app.py --server.address 127.0.0.1
+mkdir var\audit
+venv\Scripts\streamlit run apps/pii_agent_app.py --server.address 127.0.0.1
 ```
 
-Open `http://127.0.0.1:8501`, upload `sample.txt`, and ask:
+Open `http://127.0.0.1:8501`, upload `data/samples/sample.txt`, and ask:
 
 ```
 scrub sample.txt with DEFAULT_PII for INTERNAL_SIEM
 ```
 
 You get a findings table, a verified-clean download, and an audit record. About
-five seconds for `sample.txt`, about two minutes for the 260 KB `sample_large.txt`.
+five seconds for `data/samples/sample.txt`, about two minutes for the 260 KB `data/samples/sample_large.txt`.
 
 ## Documentation
 
@@ -77,7 +77,7 @@ five seconds for `sample.txt`, about two minutes for the 260 KB `sample_large.tx
 | [Handoff notes](HANDOFF.md) | Current state and decisions that look odd without their reasoning |
 
 An HTML version of each sits beside it. Two additional dashboards cover the spec:
-`requirements-dashboard.html` and `design-dashboard.html`, the latter with 17
+`docs/dashboards/requirements-dashboard.html` and `docs/dashboards/design-dashboard.html`, the latter with 17
 Mermaid diagrams.
 
 Full specification: `.kiro/specs/pii-scrubbing-agent/` — 46 requirements, a design
@@ -119,8 +119,8 @@ reporting every finding.
 | 8 | Remaining profiles, golden datasets, adversarial suite | ⬜ |
 
 **844 tests passing, 3 skipped, ~90 seconds.** Branch coverage held at 100% on
-`core/policy.py`, `core/reconciler.py`, `models/coverage.py`, `utils/paths.py` and
-`session/allowlist.py`.
+`pii_agent/core/policy.py`, `pii_agent/core/reconciler.py`, `pii_agent/models/coverage.py`, `pii_agent/utils/paths.py` and
+`pii_agent/session/allowlist.py`.
 
 ```bat
 venv\Scripts\python -m pytest tests\ -q
@@ -142,7 +142,7 @@ actioned — not a proof the file is free of all sensitive data.
 zero-width characters, homoglyphs, full-width digits, lookalike punctuation,
 combining marks, case alternation, and values written with spaces between
 characters. But base64-encoded and hex-encoded values are not decoded, and produce
-no warning. See `tests/security/test_adversarial_evasion.py`, where both gaps are
+no warning. See `tests/pii_agent/security/test_adversarial_evasion.py`, where both gaps are
 explicit tests.
 
 **No access control.** Single-operator trust model. Startup refuses a non-loopback
@@ -180,22 +180,27 @@ what the fail-closed gates depend on.
 
 | Path | Contents |
 |---|---|
-| `app.py` | Streamlit entry point |
-| `agent/` | LangGraph loop, system prompt, session memory |
-| `tools/` | The six coarse agent tools |
-| `core/` | Deterministic pipeline — chunk, detect, reconcile, policy, apply, verify |
-| `models/` | Entities, decisions, results, coverage, enums |
-| `session/` | Content store, token vault, audit sink, allowlist |
-| `profiles/` | Policy as YAML, plus schema validation |
-| `utils/` | Config, sandbox paths, budgets, content gate, safe parsers |
-| `ui/` | Presenters and the Streamlit drawing layer |
+| `apps/pii_agent_app.py` | Streamlit entry point |
+| `pii_agent/` | The security product, independently deployable |
+| `explorer/` | The GenAI Architecture Explorer platform (in progress) |
+| `pii_agent/agent/` | LangGraph loop, system prompt, session memory |
+| `pii_agent/tools/` | The six coarse agent tools |
+| `pii_agent/core/` | Deterministic pipeline — chunk, detect, reconcile, policy, apply, verify |
+| `pii_agent/models/` | Entities, decisions, results, coverage, enums |
+| `pii_agent/session/` | Content store, token vault, audit sink, allowlist |
+| `pii_agent/profiles/` | Policy as YAML, plus schema validation |
+| `pii_agent/utils/` | Config, sandbox paths, budgets, content gate, safe parsers |
+| `pii_agent/ui/` | Presenters and the Streamlit drawing layer |
 | `tests/` | unit · security · property · integration |
 | `docs/` | Documentation, Markdown source and generated HTML |
 | `tools_dev/` | Sample generator and docs builder |
 | `.kiro/specs/` | Requirements, design with architecture review, task plan |
 
-`core/` imports no LLM library, and nothing in `core/` imports from `agent/` or
-`tools/`. Both constraints are asserted by test.
+`pii_agent/core/` imports no LLM library, and nothing in `pii_agent/core/` imports
+from `pii_agent/agent/` or `pii_agent/tools/`. Both are asserted by test, along
+with five further dependency rules in
+`tests/architecture/test_import_direction.py` — including that `pii_agent` never
+imports the platform, so the security product stays independently deployable.
 
 ## License and scope
 

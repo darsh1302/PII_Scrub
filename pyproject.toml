@@ -1,0 +1,64 @@
+[project]
+name = "genai-architecture-explorer"
+version = "0.1.0"
+description = "An explainable AI systems laboratory, with the PII Scrubbing Agent as its first capability"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+
+# Dependencies are NOT declared here. requirements.txt remains the single source of
+# truth because it is exact-pinned, and that pinning is a correctness requirement:
+# engine and model versions are recorded in every audit record, so a floating
+# version would make a historical result non-reproducible.
+# tests/pii_agent/test_dependency_pins.py enforces it.
+
+[tool.pytest.ini_options]
+# Repo root on the path, so `pii_agent` and `explorer` import without an editable
+# install. Deliberately not a src/ layout: keeping "clone it, two commands, it
+# runs" has more value here than the convention.
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "--strict-markers"
+markers = [
+    "slow: takes more than a few seconds",
+    "requires_provider: needs a live model provider and is skipped by default",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:presidio_analyzer.*",
+    "ignore::DeprecationWarning:spacy.*",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["pii_agent", "explorer"]
+omit = ["*/__pycache__/*", "*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+# Modules where a missed branch is a potential security hole rather than an
+# untested convenience. Held at 100% branch coverage deliberately.
+[tool.coverage.paths]
+security_critical = [
+    "pii_agent/core/policy.py",
+    "pii_agent/core/reconciler.py",
+    "pii_agent/models/coverage.py",
+    "pii_agent/utils/paths.py",
+    "pii_agent/session/allowlist.py",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S"]
+ignore = [
+    "S101",  # assert is the point in tests
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106"]  # fixture credentials are fabricated

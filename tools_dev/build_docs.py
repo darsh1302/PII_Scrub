@@ -23,23 +23,33 @@ from markdown_it import MarkdownIt
 ROOT = Path(__file__).resolve().parent.parent
 
 # (source, output, nav title)
+#
+# All generated HTML lands in docs/dashboards/, so the repository root stays
+# readable and one directory holds every artifact this script produces.
+DASHBOARDS = ROOT / "docs" / "dashboards"
+
 PAGES: list[tuple[Path, Path, str]] = [
-    (ROOT / "README.md", ROOT / "README.html", "Overview"),
+    (ROOT / "README.md", DASHBOARDS / "README.html", "Overview"),
     (
         ROOT / "docs/01-how-it-works.md",
-        ROOT / "docs/01-how-it-works.html",
+        DASHBOARDS / "01-how-it-works.html",
         "How it works",
     ),
     (
         ROOT / "docs/02-architecture-and-flow.md",
-        ROOT / "docs/02-architecture-and-flow.html",
+        DASHBOARDS / "02-architecture-and-flow.html",
         "Architecture",
     ),
-    (ROOT / "docs/03-setup.md", ROOT / "docs/03-setup.html", "Setup"),
+    (ROOT / "docs/03-setup.md", DASHBOARDS / "03-setup.html", "Setup"),
     (
         ROOT / "docs/04-functionality-and-prompts.md",
-        ROOT / "docs/04-functionality-and-prompts.html",
+        DASHBOARDS / "04-functionality-and-prompts.html",
         "Functionality",
+    ),
+    (
+        ROOT / "docs/demo-script.md",
+        DASHBOARDS / "demo-script.html",
+        "Demo script",
     ),
 ]
 

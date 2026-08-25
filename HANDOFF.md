@@ -12,8 +12,8 @@ Spec lives in `.kiro/specs/pii-scrubbing-agent/`:
 - `design.md` — design plus a senior architecture review (22 findings)
 - `tasks.md` — 9 phases, checkboxes reflect real progress
 
-Two HTML dashboards at the repo root: `requirements-dashboard.html` and
-`design-dashboard.html` (the latter has 17 Mermaid diagrams).
+Two HTML dashboards under `docs/dashboards/`: `requirements-dashboard.html` and
+`docs/dashboards/design-dashboard.html` (the latter has 17 Mermaid diagrams).
 
 ## Current state
 
@@ -32,8 +32,8 @@ Two HTML dashboards at the repo root: `requirements-dashboard.html` and
 **844 tests passing, 3 skipped, ~1.4 minutes.**
 
 Run: `venv\Scripts\python -m pytest tests\ -q`
-UI: `venv\Scripts\streamlit run app.py --server.address 127.0.0.1`
-Sample files: `sample.txt` (3 KB, ~5s) and `sample_large.txt` (260 KB, ~110s)
+UI: `venv\Scripts\streamlit run apps/pii_agent_app.py --server.address 127.0.0.1`
+Sample files: `data/samples/sample.txt` (3 KB, ~5s) and `data/samples/sample_large.txt` (260 KB, ~110s)
 
 ## The architecture, in one paragraph
 
@@ -105,7 +105,7 @@ returned `verified_clean: true`. It now carries `blocked_this_request: False` an
 a note saying it is an observation about the source. The UI still reads
 `result.security_findings`, the dataclass field, which is unchanged.
 
-**Restart Streamlit after editing `agent/prompts.py`.** `_runtime_for` is
+**Restart Streamlit after editing `pii_agent/agent/prompts.py`.** `_runtime_for` is
 `@st.cache_resource` keyed on session id, and `AgentRuntime` builds the system
 prompt in its constructor, so cached resources survive script reruns and prompt
 edits do not take effect. The reset button calls `st.cache_resource.clear()`,
@@ -244,14 +244,14 @@ and 1.32x at 8 on 12 cores — `re` holds the GIL. A process pool would give a r
 the Cloud demo.
 
 **Evasion resistance is proven for character-level attacks, and has three gaps.**
-`tests/security/test_adversarial_evasion.py` (29 tests) confirms zero-width and
+`tests/pii_agent/security/test_adversarial_evasion.py` (29 tests) confirms zero-width and
 bidi controls, Cyrillic/Greek homoglyphs, full-width digits, lookalike dashes,
 combining marks and case alternation are all defeated — including a stacked attack
 that still produces a verified-clean artifact, which exercises the offset map under
 normalization.
 
 **Spaced-character evasion is now defended** by `detect_spaced_evasion`, a second
-pass in `core/detector.py`. It runs only when a chunk contains a run of
+pass in `pii_agent/core/detector.py`. It runs only when a chunk contains a run of
 individually-spaced characters, and only for validator-backed types (`US_SSN`,
 `CREDIT_CARD`, `IBAN_CODE`, `ROUTING_NUMBER`).
 
@@ -297,11 +297,11 @@ unless `PII_AGENT_ALLOW_REMOTE=true`. Requirement 69 is Phase 2.
 ## Environment
 
 `.env` holds a working `OPENAI_API_KEY`, a 64-byte `PII_AGENT_TOKEN_VAULT_SALT`,
-`PII_AGENT_SCAN_ROOTS=c:\AI\scan_workspace`, loopback bind.
+`PII_AGENT_SCAN_ROOTS=c:\AI\var\scan_workspace`, loopback bind.
 
 Dependencies are exact-pinned — engine versions are recorded in every audit
 record, so a floating version would make historical results non-reproducible.
-`tests/test_dependency_pins.py` enforces this.
+`tests/pii_agent/test_dependency_pins.py` enforces this.
 
 ## Suggested next steps
 
