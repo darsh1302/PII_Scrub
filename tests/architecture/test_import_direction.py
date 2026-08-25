@@ -44,6 +44,10 @@ EXPLORER_DETERMINISTIC = (
     "explorer.storage",
     "explorer.observability",
     "explorer.security.pii_service",
+    # Authentication must not be able to reach a model. Nothing about verifying a
+    # password or resolving a session needs one, so an import here would be either a
+    # mistake or something considerably worse.
+    "explorer.security.identity",
 )
 
 
@@ -254,6 +258,38 @@ def test_d5_deterministic_platform_services_import_no_llm_library(imports):
             "Deterministic services must not import an LLM library directly "
             "either. explorer.security.llm_assist is the sanctioned exception "
             "and is deliberately not in this list.",
+        )
+
+
+# ---------------------------------------------------------------------------
+# D8 — added during task 3
+# ---------------------------------------------------------------------------
+def test_d8_storage_is_the_bottom_layer(imports):
+    """``explorer.storage`` imports no other explorer package.
+
+    Added after writing this violation by accident. ``SessionRecord`` was defined in
+    ``explorer.security.identity.sessions`` and the session repository imported it, so
+    the storage layer depended on the security layer. It ran, all the tests passed,
+    and it was wrong: a schema change would then be reachable from an authentication
+    change, and the row shapes could no longer be used by anything that did not want
+    the security package.
+
+    The fix was to move the record into ``explorer.storage.records`` with every other
+    row shape. The rule is here so the next person does not have to notice.
+    """
+    violations = [
+        ref
+        for ref in imports
+        if _in(ref.module, "explorer.storage")
+        and _in(ref.imported, "explorer")
+        and not _in(ref.imported, "explorer.storage")
+    ]
+    if violations:
+        _fail(
+            "D8",
+            violations,
+            "Storage is the lowest layer of the platform. Move the shared type "
+            "into explorer.storage.records, or pass the value in as a parameter.",
         )
 
 

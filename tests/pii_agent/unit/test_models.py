@@ -463,16 +463,107 @@ def test_status_reflects_refusal():
 
 
 def test_llm_metadata_contains_no_content_or_offsets():
-    """Property 9."""
+    """Property 9 — the model never receives content or entity offsets.
+
+    The offset assertion is structural rather than a substring search, and that
+    matters. The original version asserted ``"42" not in str(meta)`` for an entity at
+    offset 42, and it failed once when ``request_id`` was generated as ``426a7e60`` —
+    a coincidental match, not a leak.
+
+    Distinctive offsets would have hidden the flake rather than fixed it. A short
+    number legitimately appears in a hex id, a token count or a percentage, so
+    searching rendered text for it asserts something the projection was never meant
+    to guarantee. What Property 9 actually requires is that no *offset field* is
+    present, which is what is checked here.
+
+    Same lesson as the Hypothesis property corrected during the restructure: "this
+    value appears nowhere in the output" is almost always the wrong shape for an
+    assertion about a value that is also an ordinary number.
+    """
     r = ProcessingResult(
         entities=[
             Entity(type="US_SSN", start=42, end=53, confidence=0.9, text="123-45-6789")
         ]
     )
     meta = r.to_llm_metadata()
-    rendered = str(meta)
-    assert "123-45-6789" not in rendered
-    assert "42" not in rendered
+
+    # Content must not appear at all. A credit-card-shaped string has no innocent
+    # reason to be in a metadata projection, so a substring search is valid here.
+    assert "123-45-6789" not in str(meta)
+
+    forbidden_keys = {"start", "end", "offset", "offsets", "start_offset",
+                      "end_offset", "text", "value", "content", "entities"}
+
+    def walk(node, path="meta"):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                assert key not in forbidden_keys, (
+                    f"{path}.{key} exposes an offset or a value to the model"
+                )
+                walk(value, f"{path}.{key}")
+        elif isinstance(node, (list, tuple)):
+            for index, value in enumerate(node):
+                walk(value, f"{path}[{index}]")
+
+    walk(meta)
+
+    # And the offsets are genuinely absent as values, checked against the fields that
+    # could plausibly carry a number rather than against the whole rendering.
+    numeric_values = _numeric_leaves(meta)
+    assert 42 not in numeric_values
+    assert 53 not in numeric_values
+
+
+def test_the_llm_metadata_checker_would_catch_a_leak():
+    """The guard on the guard above.
+
+    A structural check that walks a nested dict is easy to write in a way that only
+    inspects the top level, and it would then pass for a projection that nested an
+    offset one layer down. This drives the same walk over a fabricated projection that
+    does leak, and asserts it is caught.
+    """
+    leaky = {
+        "request_id": "abc123",
+        "entity_breakdown": {"US_SSN": 1},
+        "spans": [{"start": 42, "end": 53}],
+    }
+
+    forbidden_keys = {"start", "end", "offset", "text", "value", "content"}
+    found: list[str] = []
+
+    def walk(node, path="meta"):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key in forbidden_keys:
+                    found.append(f"{path}.{key}")
+                walk(value, f"{path}.{key}")
+        elif isinstance(node, (list, tuple)):
+            for index, value in enumerate(node):
+                walk(value, f"{path}[{index}]")
+
+    walk(leaky)
+    assert found == ["meta.spans[0].start", "meta.spans[0].end"]
+    assert 42 in _numeric_leaves(leaky)
+
+
+def _numeric_leaves(node) -> set[int]:
+    """Every integer appearing anywhere in a nested structure.
+
+    Used to assert offsets are absent as values without tripping over a hex id that
+    happens to contain the same digits as a string.
+    """
+    found: set[int] = set()
+    if isinstance(node, bool):
+        return found
+    if isinstance(node, int):
+        found.add(node)
+    elif isinstance(node, dict):
+        for value in node.values():
+            found |= _numeric_leaves(value)
+    elif isinstance(node, (list, tuple)):
+        for value in node:
+            found |= _numeric_leaves(value)
+    return found
 
 
 def test_audit_record_avoids_forbidden_field_names():

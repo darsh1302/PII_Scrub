@@ -19,7 +19,7 @@ inherited attribute. Design document, "Core tables".
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from uuid import UUID
 
@@ -323,3 +323,53 @@ class PriceTableVersion:
     effective_from: datetime
     entries: dict[str, object]
     created_at: datetime
+
+
+@dataclass(frozen=True)
+class SessionRecord:
+    """A stored session. Holds the token's digest, never the token.
+
+    Lives here with the other row shapes rather than in
+    ``explorer.security.identity``, so that ``explorer.storage`` does not have to
+    import the security package. Storage is the lower layer; a dependency pointing
+    upward would let a schema change be driven by an authentication change.
+
+    The live token has no representation in this module at all — see
+    :class:`explorer.security.identity.sessions.IssuedSession`, which exists exactly
+    once per login and is never persisted.
+    """
+
+    id: UUID
+    user_id: UUID
+    token_sha256: str
+    created_at: datetime
+    expires_at: datetime
+    last_seen_at: datetime
+    revoked_at: datetime | None = None
+    user_agent: str | None = None
+    created_ip: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.expires_at <= self.created_at:
+            raise ValueError(
+                "a session expiring at or before its creation is either a clock "
+                "problem or a zero lifetime; both should fail loudly"
+            )
+        if len(self.token_sha256) != 64:
+            raise ValueError(
+                f"token_sha256 must be 64 hex characters, got "
+                f"{len(self.token_sha256)} — a truncated digest would make two "
+                f"different tokens collide"
+            )
+
+    def is_usable(self, *, now: datetime, idle_timeout: timedelta) -> bool:
+        """Whether this session may authenticate a request.
+
+        Three conditions, checked here rather than in the query, so a repository that
+        forgets a predicate cannot yield a usable session.
+        """
+        if self.revoked_at is not None:
+            return False
+        if now >= self.expires_at:
+            return False
+        return now - self.last_seen_at < idle_timeout

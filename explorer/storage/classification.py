@@ -222,6 +222,21 @@ REGISTRY: tuple[Classification, ...] = (
             "never persisted by us."
         ),
     ),
+    # --- telemetry, continued -----------------------------------------------
+    Classification(
+        category="session",
+        data_class=DataClass.TELEMETRY,
+        store=Store.POSTGRES,
+        retention=RetentionDriver.POLICY_PER_WORKSPACE,
+        rationale=(
+            "Telemetry rather than configuration, because a session row records "
+            "that a named person was active at a given time — which is a fact "
+            "about behaviour, not a setting. It therefore gets a clock: identity "
+            "is retained indefinitely, a record of when someone logged in is not. "
+            "Holds only the token's SHA-256, so a database read yields nothing "
+            "replayable."
+        ),
+    ),
     Classification(
         category="experiment",
         data_class=DataClass.CONFIGURATION,
@@ -337,6 +352,7 @@ TABLE_CATEGORY: dict[str, str] = {
     "workspace": "workspace",
     "app_user": "identity",
     "membership": "identity",
+    "user_session": "session",
     "experiment": "experiment",
     "run": "run_metrics",
     "tool_invocation": "run_metrics",

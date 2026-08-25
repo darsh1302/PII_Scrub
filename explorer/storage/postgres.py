@@ -36,6 +36,7 @@ from explorer.storage.records import (
     RetentionPolicy,
     Role,
     Run,
+    SessionRecord,
     ToolInvocation,
     TraceEvent,
     User,
@@ -1044,4 +1045,126 @@ def _retention_policy(row: Mapping[str, Any]) -> RetentionPolicy:
         category=row["category"],
         retention_days=row["retention_days"],
         updated_at=row["updated_at"],
+    )
+
+
+# ---------------------------------------------------------------------------
+# sessions
+# ---------------------------------------------------------------------------
+class PgSessionRepository(_Base):
+    """Server-side sessions. Stores digests, never tokens.
+
+    Lookup is by digest only. There is no method taking a raw token, so no call site
+    can pass one into a query and have it end up in a statement log.
+    """
+
+    def create(self, record: SessionRecord) -> None:
+        self._write(
+            """
+            INSERT INTO user_session
+                (id, user_id, token_sha256, created_at, expires_at, last_seen_at,
+                 revoked_at, user_agent, created_ip)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                record.id,
+                record.user_id,
+                record.token_sha256,
+                record.created_at,
+                record.expires_at,
+                record.last_seen_at,
+                record.revoked_at,
+                record.user_agent,
+                record.created_ip,
+            ),
+        )
+
+    def find_by_token_digest(self, token_sha256: str) -> SessionRecord | None:
+        rows = self._all(
+            "SELECT * FROM user_session WHERE token_sha256 = %s", (token_sha256,)
+        )
+        return _session(rows[0]) if rows else None
+
+    def get(self, session_id: UUID) -> SessionRecord:
+        return _session(
+            self._one("SELECT * FROM user_session WHERE id = %s", (session_id,))
+        )
+
+    def touch(self, session_id: UUID, *, seen_at: datetime) -> None:
+        """Record activity, for the idle clock.
+
+        Deliberately does not extend ``expires_at``. The absolute lifetime is what
+        forces periodic re-authentication; sliding it on every request would make a
+        session that is used often effectively permanent.
+        """
+        self._write(
+            "UPDATE user_session SET last_seen_at = %s WHERE id = %s",
+            (seen_at, session_id),
+        )
+
+    def revoke(self, session_id: UUID, *, at: datetime) -> bool:
+        """End a session now.
+
+        Sets ``revoked_at`` rather than deleting, so "this session ended at 14:02"
+        stays answerable. Already-revoked rows are not re-stamped, which keeps the
+        first revocation time as the true one.
+        """
+        return (
+            self._write(
+                """
+                UPDATE user_session SET revoked_at = %s
+                WHERE id = %s AND revoked_at IS NULL
+                """,
+                (at, session_id),
+            )
+            > 0
+        )
+
+    def revoke_all_for_user(self, user_id: UUID, *, at: datetime) -> int:
+        """Every live session for one person.
+
+        Needed by three flows that all mean the same thing: a password change, an
+        account being disabled, and a suspected compromise. A signed-token scheme
+        could not do this at all, which is the main reason sessions are server-side.
+        """
+        return self._write(
+            """
+            UPDATE user_session SET revoked_at = %s
+            WHERE user_id = %s AND revoked_at IS NULL
+            """,
+            (at, user_id),
+        )
+
+    def delete_expired(self, *, before: datetime) -> int:
+        """Remove rows past their absolute lifetime. Called by the sweeper.
+
+        Retention, not tidiness: a session row names a person and the time they were
+        active, which is exactly the kind of record `[R14.3]` wants a clock on.
+        """
+        return self._write(
+            "DELETE FROM user_session WHERE expires_at < %s", (before,)
+        )
+
+    def count_live_for_user(self, user_id: UUID, *, now: datetime) -> int:
+        rows = self._all(
+            """
+            SELECT count(*) AS n FROM user_session
+            WHERE user_id = %s AND revoked_at IS NULL AND expires_at > %s
+            """,
+            (user_id, now),
+        )
+        return int(rows[0]["n"])
+
+
+def _session(row: Mapping[str, Any]) -> SessionRecord:
+    return SessionRecord(
+        id=row["id"],
+        user_id=row["user_id"],
+        token_sha256=row["token_sha256"],
+        created_at=row["created_at"],
+        expires_at=row["expires_at"],
+        last_seen_at=row["last_seen_at"],
+        revoked_at=row["revoked_at"],
+        user_agent=row["user_agent"],
+        created_ip=row["created_ip"],
     )

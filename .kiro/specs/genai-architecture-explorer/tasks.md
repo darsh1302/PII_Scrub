@@ -255,33 +255,40 @@ Task detail follows by phase. Checkboxes reflect real progress.
 
 ## Phase 2 — Authentication and isolation
 
-- [ ] 3. Establish an authenticated, workspace-scoped boundary
+- [x] 3. Establish an authenticated, workspace-scoped boundary
   - Precedes any content persistence. `[R15.5]` keeps the non-loopback refusal in force until this exists
   - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.6, 15.7_
   - _Properties: P10_
 
-- [ ] 3.1 Implement identity and sessions
+- [x] 3.0 Notes on how this was built
+  - **KDF is `hashlib.scrypt`, not Argon2id.** Argon2id is the better choice and OWASP's first recommendation; it needs a compiled third-party wheel, and this project pins every dependency exactly for reproducibility reasons unrelated to passwords. scrypt is memory-hard, in the standard library, and OWASP-acceptable at N=2^16, r=8, p=1. The decision is recoverable rather than permanent: every verifier records its own algorithm and parameters, so adding Argon2id later means teaching `verify` a second prefix and rehashing on next login — no migration, no password reset
+  - **Roles are a capability table, not an ordered enum.** An ordering asserts that every higher role includes every lower permission, so each new capability silently attaches to everything above wherever it is inserted. It also makes separation of duty impossible to express: approver deliberately does not hold `WRITE_CONTENT`, because someone who both prepares and approves a request has defeated the gate
+  - **Identity lives in `explorer/security/identity/`, not `explorer/api/`.** Both the Streamlit layer and the FastAPI app need to authenticate, and a password verifier testable only through an HTTP client is one that gets tested less thoroughly. Added to the deterministic list in the architecture test, so nothing here can reach a model
+  - **New rule D8: `explorer.storage` imports no other explorer package.** Written after committing the violation by accident — `SessionRecord` was defined in the security package and imported by the session repository, inverting the layering. It ran and every test passed
+  - _Requirements: 15.1, 15.2_
+
+- [x] 3.1 Implement identity and sessions
   - Password verification with a memory-hard KDF; record the KDF and its parameters so they can be raised later
   - Server-side sessions with expiry; the cookie carries an opaque identifier only
   - _Requirements: 15.1, 15.7_
 
-- [ ] 3.2 Implement workspaces, membership and roles
+- [x] 3.2 Implement workspaces, membership and roles
   - Role held on membership rather than on the user — the same person may approve in one workspace and only read in another
   - Roles: reader, author, approver, admin
   - _Requirements: 15.2, 15.6_
 
-- [ ] 3.3 Enforce workspace scoping at the query level
+- [x] 3.3 Enforce workspace scoping at the query level
   - The workspace predicate belongs in the query, not in a post-filter over results. A post-filter means the other workspace's rows were already read
   - _Requirements: 15.3_
 
-- [ ] 3.4 Build the isolation matrix test
+- [x] 3.4 Build the isolation matrix test
   - Seed two workspaces; authenticate as a member of one; assert every read path returns nothing from the other — document fetch, artifact download, trace view, vector search, memory recall, run listing, experiment listing
   - Structure it so that adding a read path without adding a row fails the suite
   - Assert a cross-workspace attempt is indistinguishable from not-found, so existence is not disclosed
   - _Requirements: 15.4_
   - _Properties: P10_
 
-- [ ] 3.5 Lift the non-loopback restriction, conditionally
+- [x] 3.5 Lift the non-loopback restriction, conditionally
   - Startup permits a non-loopback bind only when authentication is configured and enabled; otherwise the existing refusal stands
   - _Requirements: 15.5_
 

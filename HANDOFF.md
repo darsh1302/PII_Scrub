@@ -50,13 +50,14 @@ Explorer:
 |---|---|---|---|
 | 0 | 1 | Restructure — two product packages, import-direction test | ✅ |
 | 1 | 2 | Storage foundation — Postgres, migrations, object store | ✅ |
-| 2 | 3 | Auth and isolation | ⬜ next |
-| 3 | 4 | Retention and deletion | ⬜ |
+| 2 | 3 | Auth and isolation — identity, roles, the isolation matrix | ✅ |
+| 3 | 4 | Retention and deletion | ⬜ next |
 | 4 | 5 | Observability | ⬜ |
 | 5–14 | 6–15 | Model gateway through MVP acceptance | ⬜ |
 
-**1055 tests passing, 3 skipped.** 966 from the PII agent, unchanged in behaviour
-through the restructure, 9 architecture tests, and 80 for the storage foundation.
+**1143 tests passing, 4 skipped.** 966 from the PII agent, unchanged in behaviour
+through the restructure, 10 architecture tests, and 167 for the storage foundation
+and the authenticated boundary.
 
 Run: `venv\Scripts\python -m pytest tests\ -q`
 
@@ -174,7 +175,97 @@ Four traps in that script, all now handled and all worth knowing about:
 * `shutil.rmtree` raises `WinError 145` on paths over the Windows limit. Not a
   permissions problem, and retrying does not help; the extended-length prefix does.
 
-## Dependency rules D1–D7
+## The authenticated boundary
+
+**Roles are a capability table, not an ordered enum.** `if role >= APPROVER` reads
+well and is wrong in a way that surfaces late: an ordering asserts every higher role
+includes every lower permission, so a new capability silently attaches to everything
+above wherever it is inserted. It also makes separation of duty inexpressible.
+Approver deliberately does *not* hold `WRITE_CONTENT` — someone who both prepares a
+request and approves it has defeated the gate. `DELETE_CONTENT` and
+`REVERSE_TOKENIZATION` are admin-only.
+
+**A non-member gets `NotFound`, not `NotPermitted`.** `[R15.4]` requires a
+cross-workspace attempt to be indistinguishable from not-found. "Forbidden" confirms
+the identifier is real, which is enough to enumerate another tenant's documents by
+trying ids. Asserted by comparing both the exception type and the message.
+
+**Sessions are server-side, and the token is never stored.** What is stored is its
+SHA-256, so a backup or a slow-query log yields nothing replayable. Plain SHA-256
+rather than a KDF, unlike passwords: the token is 256 bits of CSPRNG output with no
+dictionary to slow down. Two clocks, not one — an absolute lifetime plus a separate
+idle timeout, because collapsing them gives either a session that never
+re-authenticates or an active user thrown out mid-task. Resolving a session updates
+`last_seen_at` and deliberately does not extend `expires_at`.
+
+The reason for server-side rather than signed tokens is revocation. A signed token
+cannot be withdrawn before it expires, so disabling an account or removing a role
+would take effect only at the next issue — and `[R15.2]` makes role the gate on
+approval authority.
+
+**The KDF is `hashlib.scrypt`, not Argon2id.** Argon2id is the better choice and
+OWASP's first recommendation, but it needs a compiled third-party wheel and this
+project pins every dependency exactly for reproducibility reasons that have nothing
+to do with passwords. scrypt is memory-hard, in the standard library, and acceptable
+at N=2¹⁶, r=8, p=1 — about 64 MiB per verification.
+
+The decision is recoverable, which is the point of recording the algorithm and its
+parameters in every verifier string. Adding Argon2id later means teaching `verify` a
+second prefix and rehashing on next successful login: no migration, no password
+reset. Parameters live in the row for the same reason — raising `DEFAULT_N` upgrades
+people as they sign in rather than locking everyone out.
+
+**Login failures are deliberately identical, including in timing.** Unknown address,
+wrong password and disabled account all raise the same `AuthenticationFailed`.
+Distinguishing them turns the form into an account-existence oracle. A wasted
+derivation runs against a fixed verifier when the account does not exist, so response
+time does not answer the question the error message refuses to. That equaliser is
+generated at import rather than hardcoded, so it tracks `DEFAULT_N` automatically —
+a hardcoded string would silently stop matching the real cost the first time
+parameters were raised, and the timing channel would quietly reopen.
+
+**The non-loopback bind is now conditional, on three runtime facts.** `[R15.5]`
+lifted an absolute refusal, and the risk in that change is a condition satisfied by
+the code existing rather than by authentication being in force. All three are runtime
+facts: `EXPLORER_AUTH_ENABLED=true` as an explicit operator decision, the
+`user_session` table present so a login can be recorded, and at least one enabled
+account. The third is the one most likely to be argued about — an empty user table
+with a first-run setup flow is a common pattern and a common breach, because the
+setup flow is reachable by whoever finds the port first.
+
+Every parameter defaults to the refusing value, so a caller that forgets one gets a
+service that will not start rather than one that starts open. Only the exact string
+`true` enables authentication; `yes` and `1` are rejected, because a permissive parse
+means a typo silently opens the port. An unparseable address counts as non-loopback,
+since DNS can point a friendly hostname anywhere.
+
+## The isolation matrix, and why its second test matters more
+
+`tests/explorer/security/test_isolation_matrix.py` drives every workspace-scoped read
+path with the wrong workspace. That alone would document the read paths existing on
+the day it was written.
+
+The companion test derives the set of read paths by walking the repository classes and
+fails when one is not covered. It took three iterations to get right, and the
+iterations are the interesting part. It began as a list of read prefixes — `get`,
+`list`, `find`, `count` — which missed `role_for`, then `for_invocation`, each caught
+only because a second test checks the opposite direction for stale entries. Prefix
+matching would have missed a future `fetch_by_label` silently, so the default is now
+inverted: **writes are enumerated and everything else public is assumed to be a
+read**, which must be covered or explicitly exempted with a reason. Being wrong now
+costs an exemption someone has to justify rather than a gap nobody sees.
+
+A third test points the matrix at its own workspace and asserts every entry *does*
+find something. Without it, a matrix whose callables were subtly broken — a wrong id,
+a typo in a category — would return nothing for both workspaces and pass.
+
+One exemption is worth knowing about. `missing_categories` reports absence: it returns
+`required - configured`, so its output is a subset of the caller's own argument and
+cannot contain another workspace's rows. Driving it through the matrix asserted the
+wrong polarity — for a workspace with no policies it correctly returns every required
+category, which the "empty means safe" rule read as a leak.
+
+## Dependency rules D1–D8
 
 Enforced by `tests/architecture/test_import_direction.py`, which walks the AST of
 every module under `pii_agent/` and `explorer/`.
@@ -190,6 +281,15 @@ every module under `pii_agent/` and `explorer/`.
 - **D5** deterministic platform services import nothing from `explorer.agents` or
   `explorer.llm`
 - **D7** nothing imports a `ui` package; presentation is a leaf
+- **D8** `explorer.storage` imports no other `explorer` package — added during task
+  3, after committing the violation by accident. `SessionRecord` was defined in
+  `explorer.security.identity` and imported by the session repository, so storage
+  depended on security. It ran and every test passed. The record moved to
+  `explorer/storage/records.py` with the other row shapes
+
+`explorer.security.identity` is in the deterministic list alongside storage and
+chunking: nothing about verifying a password or resolving a session needs a model, so
+an import there would be either a mistake or considerably worse.
 
 D1, D3, D4 and D7 were each verified by writing a violation, confirming the suite
 failed, then removing it. A rule that has never failed has never been tested. The
@@ -475,18 +575,20 @@ record, so a floating version would make historical results non-reproducible.
 Work has moved to the Explorer plan. Task 1 is complete and pushed
 (`17a4256` on `origin/main`).
 
-1. **Explorer task 3 — authentication and isolation.** Identity with a memory-hard
-   KDF, workspaces and roles on membership, query-level scoping, and the isolation
-   matrix `[R15.4]`. The matrix is the piece to get right: seed two workspaces and
-   assert every read path returns nothing from the other, structured so that adding
-   a read path without adding a row fails the suite. The composite foreign keys
-   already make cross-workspace *parenting* impossible; the matrix covers
-   cross-workspace *reading*.
-2. **Then task 4 — retention.** A startup precondition, not a policy document.
-   `RETENTION_REQUIRED_CATEGORIES` and `missing_categories()` already exist for it
-   to build on, derived from the classification registry rather than listed
-   separately so a new content category cannot avoid acquiring a period.
-3. **PII agent Phase 7** — CloudWatch and Windows Event Log adapters — is deferred,
+1. **Explorer task 4 — retention and deletion.** A startup precondition, not a policy
+   document. `RETENTION_REQUIRED_CATEGORIES` and `missing_categories()` already exist
+   for it to build on, derived from the classification registry rather than listed
+   separately, so a new content category cannot avoid acquiring a period. The cascade
+   is already asserted at the row level; what task 4.2 adds is object-store payload
+   removal, which the database cannot do — Property 14 covers both halves.
+2. **Then task 5 — observability.** Trace events with redaction on the write path.
+   The `trace_event` table and its `redaction_count` column exist; the middleware does
+   not. Property 11 must be asserted on the write call, not on rendered output.
+3. **Not yet built, deliberately.** The FastAPI application. Identity, sessions,
+   roles and scoping are complete and unit-tested beneath it, so the API is a thin
+   caller — but nothing currently binds a port, and `evaluate_bind` has no caller.
+   Wire it when there is a server to wire it into.
+4. **PII agent Phase 7** — CloudWatch and Windows Event Log adapters — is deferred,
    not dropped. Both reuse the proven core with no new policy or offset logic, so
    they stay cheap to pick up later.
 
@@ -511,6 +613,13 @@ values, the object store for local development, and who maintains the price tabl
   the editor or Python with `encoding='utf-8'`.
 - Git is installed but not on `PATH`: `$env:Path += ";C:\Program Files\Git\cmd"`.
   PowerShell has no heredoc, so `git commit -F <file>` rather than piping.
+- **"This value appears nowhere in the output" is almost always the wrong assertion**
+  for a value that is also an ordinary number. `test_llm_metadata_contains_no_content_
+  or_offsets` asserted `"42" not in str(meta)` for an entity at offset 42, and failed
+  once when `request_id` was generated as `426a7e60`. Using a more distinctive offset
+  would have hidden the flake rather than fixed it — the check is now structural, over
+  field names and numeric leaves. This is the second instance of the same mistake in
+  this repository; the first was a Hypothesis property during the restructure.
 - **A Hypothesis example database is keyed on the test's node id.** Moving a test
   file resets it, so a property that had been passing on cached examples can start
   failing. That happened during the restructure and the property turned out to be
