@@ -34,6 +34,17 @@ defusedxml==0.7.1
 python-dotenv==1.2.2
 PyYAML==6.0.3
 
+# --- Persistence (explorer only; pii_agent has no database dependency) ---
+# psycopg 3 rather than an ORM. The workspace predicate has to be visible in the
+# statement a reviewer reads: an ORM's identity map and lazy loading make it
+# possible to reach a related row without naming a workspace, which is the ambient
+# access [R15.3] rules out.
+# The binary extra ships its own libpq, so no separate client install is needed.
+# psycopg-binary is pinned explicitly because pinning only the extra would let the
+# transitive wheel float.
+psycopg==3.3.4
+psycopg-binary==3.3.4
+
 # --- Sources ---
 boto3==1.42.6
 pywin32==312; sys_platform == "win32"

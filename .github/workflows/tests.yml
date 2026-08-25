@@ -8,11 +8,18 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  # ---------------------------------------------------------------------------
+  # The PII agent suite, on Windows.
+  # ---------------------------------------------------------------------------
+  pii-agent:
     # Windows to match the development environment. The suite covers
     # platform-specific behaviour (CRLF translation in write_text, backslash
     # doubling in OSError messages), so a Linux runner would not be testing the
     # same thing.
+    #
+    # No database here. The PII agent has no persistence dependency and dependency
+    # rule D1 keeps it that way, so this job also serves as the standing proof that
+    # the security product still runs standalone.
     runs-on: windows-latest
     timeout-minutes: 30
 
@@ -41,16 +48,86 @@ jobs:
       # No OPENAI_API_KEY is set. The deterministic core does not need one and
       # the tests never call the API, so a real key in CI would add a
       # secret-exposure risk and a source of flakiness for no coverage gain.
-      - name: Run tests
+      - name: Run the PII agent and architecture suites
         env:
           PII_AGENT_TOKEN_VAULT_SALT: ci0000000000000000000000000000000000000000000000000000000000000000
-          PII_AGENT_AUDIT_DIR: audit
+          PII_AGENT_AUDIT_DIR: var/audit
         run: |
-          mkdir audit
-          python -m pytest tests/ -q
+          mkdir var\audit
+          python -m pytest tests/pii_agent tests/architecture -q
 
+      # Run separately as well as within the suite above. This is the central claim
+      # of the architecture — the model never sees content — and calling it out by
+      # name means a failure here is unambiguous in the log rather than one dot
+      # among a thousand.
       - name: Assert the deterministic core imports no LLM library
+        env:
+          PII_AGENT_TOKEN_VAULT_SALT: ci0000000000000000000000000000000000000000000000000000000000000000
+          PII_AGENT_AUDIT_DIR: var/audit
         run: >
           python -m pytest
-          tests/integration/test_pipeline_end_to_end_no_llm.py::test_core_modules_import_no_llm_dependency
+          tests/pii_agent/integration/test_pipeline_end_to_end_no_llm.py::test_core_modules_import_no_llm_dependency
           -q
+
+  # ---------------------------------------------------------------------------
+  # The explorer suite, on Linux, against a real PostgreSQL.
+  # ---------------------------------------------------------------------------
+  explorer:
+    # Linux because service containers need it — GitHub Actions cannot attach a
+    # Postgres service to a Windows runner. The storage layer is SQL and psycopg
+    # with no platform-specific behaviour, so this is a real gap only for the
+    # filesystem object store, whose containment tests run in the Windows job too.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        # Pinned to the major version tools_dev/pg_local.py installs locally. A
+        # planner difference between server versions produces a test that passes on
+        # one machine and fails on another, which is an expensive afternoon.
+        image: postgres:18
+        env:
+          POSTGRES_USER: explorer_admin
+          POSTGRES_PASSWORD: ci_only_not_a_secret
+          POSTGRES_DB: explorer_test
+        ports:
+          - 5432:5432
+        # Without a health check the job races the server's first-boot
+        # initialisation and fails intermittently on connection refused.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # CI is set by GitHub Actions, and tests/explorer/conftest.py fails rather
+      # than skips when CI is set without a database URL. A skipped isolation
+      # matrix reads as green in a summary line, so the skip that helps a
+      # contributor locally must not be reachable here.
+      - name: Run the explorer suite
+        env:
+          CI: "true"
+          EXPLORER_TEST_DATABASE_URL: postgresql://explorer_admin:ci_only_not_a_secret@127.0.0.1:5432/explorer_test
+          EXPLORER_OBJECT_STORE: filesystem
+          EXPLORER_OBJECT_STORE_ROOT: var/object_store
+        run: python -m pytest tests/explorer tests/architecture -q

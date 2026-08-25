@@ -49,16 +49,28 @@ Explorer:
 | Phase | Task | Content | Status |
 |---|---|---|---|
 | 0 | 1 | Restructure — two product packages, import-direction test | ✅ |
-| 1 | 2 | Storage foundation — Postgres, migrations, object store | ⬜ next |
-| 2 | 3 | Auth and isolation | ⬜ |
+| 1 | 2 | Storage foundation — Postgres, migrations, object store | ✅ |
+| 2 | 3 | Auth and isolation | ⬜ next |
 | 3 | 4 | Retention and deletion | ⬜ |
 | 4 | 5 | Observability | ⬜ |
 | 5–14 | 6–15 | Model gateway through MVP acceptance | ⬜ |
 
-**975 tests passing, 3 skipped.** 966 from the PII agent, unchanged in behaviour
-through the restructure, plus 9 architecture tests.
+**1055 tests passing, 3 skipped.** 966 from the PII agent, unchanged in behaviour
+through the restructure, 9 architecture tests, and 80 for the storage foundation.
 
 Run: `venv\Scripts\python -m pytest tests\ -q`
+
+The storage tests need PostgreSQL. A local instance lives inside the repository:
+
+```
+python tools_dev/pg_local.py install     # 338 MB, no admin rights, all under var/
+python tools_dev/pg_local.py start       # prints the two URLs for .env
+```
+
+Port 5433, not 5432, so it cannot shadow a system Postgres. Without
+`EXPLORER_TEST_DATABASE_URL` those tests skip — and `tests/explorer/
+test_ci_configuration.py` fails if `CI` is set while the URL is not, because a
+skipped isolation test reads as a passing one.
 UI: `venv\Scripts\streamlit run apps/pii_agent_app.py --server.address 127.0.0.1`
 Sample files: `data/samples/sample.txt` (3 KB, ~5s) and `data/samples/sample_large.txt` (260 KB, ~110s)
 
@@ -88,6 +100,79 @@ truth; `pyproject.toml` declares no dependencies.
 
 `apps/pii_agent_app.py` carries a `sys.path` bootstrap because Streamlit puts the
 *script's* directory on the path, not the repository root.
+
+## Storage decisions that will look odd without the reasoning
+
+**Composite foreign keys carrying `workspace_id`.** Every child table references
+`(workspace_id, parent_id)` against the parent's `UNIQUE (workspace_id, id)`, not
+`parent_id` alone. The design specified single-column references and that was not
+good enough.
+
+With a plain reference, a `chunk` row can hold `workspace_id = W2` while its
+document belongs to W1. Every read filters on `workspace_id`, so the row is
+invisible to both — harmless until embeddings. A vector search filters
+`embedding.workspace_id = :caller` and scores whatever matches, so an embedding
+carrying the caller's workspace and another workspace's `document_id` would be
+scored, returned, and its source text fetched for display. One mistake in one
+caller, and a cross-workspace disclosure. Filtering correctly at every call site
+forever is not a control; a constraint is.
+
+Verified by dropping the constraint and confirming the cross-workspace row is then
+accepted. The cost is one redundant unique index per parent table, which is the
+index a workspace-scoped lookup wants anyway.
+
+**`run.completion_reason` is a CHECK, not NOT NULL.** `[R6.9]` says NOT NULL.
+Taken literally that forces a value at INSERT, before the run has finished, so
+every run would start life claiming a reason it has not reached and the column
+would record whatever the first guess was. The guarantee worth having is that a run
+cannot be *terminal* without one, which is what the constraint says. Still the
+database refusing rather than the application remembering.
+
+**Embeddings are classified as content, not derived metadata.** They look like
+metadata — a list of floats with no readable text. Inversion recovers substantial
+source content `[R4.8]`, so filing them as metadata would give them a long
+retention clock and exclude them from the deletion cascade. This is the single
+classification most likely to be "corrected" by someone reasonable, and a test
+pins it.
+
+**No ORM, and `workspace_id` is an explicit parameter on every repository method.**
+An ambient workspace would remove a parameter from perhaps sixty call sites and
+make a cross-tenant read look identical in the source to a correct one, with the
+difference living in whether some earlier frame set a variable. An ORM's identity
+map and lazy loading permit the same thing. `[R15.4]` asks for isolation to be
+impossible to bypass rather than unlikely, which is not testable when the scope is
+invisible at the call site.
+
+**There were briefly two migration runners.** `explorer/storage/database.py` and
+`engine.py` both existed, each with its own `schema_migration` table shape, and the
+second silently applied migrations recorded by the first. `database.py` was deleted;
+its two better ideas — refusing a gap in the migration sequence, and `reset_schema`
+for development — were ported into `engine.py`. Its docstring also claimed the
+composite foreign keys described above, which the schema did not have. That claim
+was worth implementing.
+
+**Local Postgres lives in the repository, not on the machine.** The EnterpriseDB
+graphical installer needs elevation, which cannot be scripted without a UAC prompt,
+registers a machine-wide service on 5432, and puts a cluster under
+`C:\Program Files` that the project cannot clean up. `tools_dev/pg_local.py` uses
+the portable binaries instead: no admin, everything under `var/`, port 5433. It
+extracts only `bin`, `lib`, `share` and `include` — pgAdmin is two thirds of the
+archive, unused, and bundles a Python whose `site-packages` paths are long enough
+that Windows cannot delete them afterwards.
+
+Four traps in that script, all now handled and all worth knowing about:
+
+* An interrupted `extractall` leaves `bin/initdb.exe` present but `share/` absent,
+  and `initdb` then reports "corrupted installation" pointing at the *data*
+  directory. Completion is recorded by a marker file, not by probing for a binary.
+* The generated superuser password must not be written inside the data directory —
+  `initdb` correctly refuses a non-empty one, and the error reads like a stale
+  cluster.
+* `pg_ctl start` hangs forever under `capture_output=True`. The postmaster inherits
+  the pipe and holds it for the life of the server, so `subprocess.run` waits on an
+  EOF that never comes, and the server is already up while the script looks failed.
+* `shutil.rmtree` raises `WinError 145` on paths over the Windows limit. Not a
+  permissions problem, and retrying does not help; the extended-length prefix does.
 
 ## Dependency rules D1–D7
 
@@ -390,18 +475,24 @@ record, so a floating version would make historical results non-reproducible.
 Work has moved to the Explorer plan. Task 1 is complete and pushed
 (`17a4256` on `origin/main`).
 
-1. **Explorer task 2 — storage foundation.** Postgres schema and migrations, an
-   object-store protocol with filesystem and S3-compatible adapters, and the
-   content classification registry. The constraint that shapes everything after
-   it: `workspace_id` NOT NULL on every table from the first migration, and every
-   repository method takes it explicitly — no ambient context, no thread-local, no
-   current-workspace global. Retrofitting isolation is how tenant leaks happen.
-2. **Explorer task 3, then 4.** Authentication and the isolation matrix, then
-   retention as a startup precondition. Both deliberately precede any content
-   persistence; neither is credible added afterwards.
+1. **Explorer task 3 — authentication and isolation.** Identity with a memory-hard
+   KDF, workspaces and roles on membership, query-level scoping, and the isolation
+   matrix `[R15.4]`. The matrix is the piece to get right: seed two workspaces and
+   assert every read path returns nothing from the other, structured so that adding
+   a read path without adding a row fails the suite. The composite foreign keys
+   already make cross-workspace *parenting* impossible; the matrix covers
+   cross-workspace *reading*.
+2. **Then task 4 — retention.** A startup precondition, not a policy document.
+   `RETENTION_REQUIRED_CATEGORIES` and `missing_categories()` already exist for it
+   to build on, derived from the classification registry rather than listed
+   separately so a new content category cannot avoid acquiring a period.
 3. **PII agent Phase 7** — CloudWatch and Windows Event Log adapters — is deferred,
    not dropped. Both reuse the proven core with no new policy or offset logic, so
    they stay cheap to pick up later.
+
+Not yet built, and deliberately so: the exact-search vector adapter is task 9.2, so
+`embedding` rows are stored and deleted but not searched. `VectorStore` is defined
+as a protocol only.
 
 Four spec questions are still open: the LLM-assist provider, concrete retention
 values, the object store for local development, and who maintains the price table.

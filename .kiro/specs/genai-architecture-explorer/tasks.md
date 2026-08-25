@@ -226,26 +226,28 @@ Task detail follows by phase. Checkboxes reflect real progress.
 
 ## Phase 1 — Storage foundation
 
-- [ ] 2. Build persistence with workspace scoping from the first table
+- [x] 2. Build persistence with workspace scoping from the first table
   - _Requirements: 14.1, 15.3, 18.1_
 
-- [ ] 2.1 Implement the storage adapter interfaces
+- [x] 2.1 Implement the storage adapter interfaces
   - Repository protocols for each entity; an object-store protocol with a filesystem adapter for local development and an S3-compatible adapter behind the same interface
   - Every repository method takes `workspace_id` explicitly. No ambient context, no thread-local, no current-workspace global
   - _Requirements: 15.3, 18.1_
 
-- [ ] 2.2 Write the schema and migrations
+- [x] 2.2 Write the schema and migrations
   - Tables per the design's data model; `workspace_id` NOT NULL on every table carrying data
   - `run.completion_reason` NOT NULL; `embedding.embedding_model` and `embedding_model_version` NOT NULL
+  - **Deviation, deliberate.** `run.completion_reason` is a CHECK constraint rather than NOT NULL: `status = 'running' AND reason IS NULL` or `status = 'terminal' AND reason IS NOT NULL`. A literal NOT NULL forces a value at INSERT, before the run has finished, so every run would begin life claiming a reason it has not reached — weaker than no column at all. The guarantee worth having is that a run cannot be *terminal* without one, and as a CHECK it is still the database refusing rather than the application remembering
+  - **Added beyond the task.** Composite foreign keys carrying `workspace_id`, so a child cannot be parented across a workspace boundary. The design specified single-column references; with those, an `embedding` row can hold the caller's `workspace_id` and another workspace's `document_id`, and a vector search would score it and return the source text. Verified by dropping the constraint and confirming the row is then accepted
   - _Requirements: 4.7, 6.9, 15.3_
   - _Properties: P7_
 
-- [ ] 2.3 Implement the content classification registry
+- [x] 2.3 Implement the content classification registry
   - Enumerate every persisted category as content, derived metadata, configuration, or telemetry, with its store and its retention driver
   - Adding a new persisted category without classifying it should fail a test
   - _Requirements: 14.1_
 
-- [ ] 2.4 Write storage tests
+- [x] 2.4 Write storage tests
   - Round-trip per repository; cascade behaviour; the classification registry covering every table
   - _Requirements: 14.1, 14.5_
 
