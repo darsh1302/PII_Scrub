@@ -1,16 +1,31 @@
-# PII Scrubbing Agent — Session Handoff
+# PII Scrubbing Agent → GenAI Architecture Explorer — Session Handoff
 
-Last updated: 16 August 2026
+Last updated: 24 August 2026
 
 ## What this is
 
-An autonomous AI agent that detects and redacts sensitive data from logs, files
-and cloud events. Built spec-first via Kiro's AIDLC workflow.
+Two products in one repository.
 
-Spec lives in `.kiro/specs/pii-scrubbing-agent/`:
+`pii_agent/` is an autonomous AI agent that detects and redacts sensitive data
+from logs, files and cloud events. It is complete through Phase 6 and
+independently deployable.
+
+`explorer/` is the GenAI Architecture Explorer — an explainable AI systems
+laboratory that takes the PII agent as its first capability. Package skeleton
+only at present; Phase 0 of its plan is done.
+
+Both built spec-first via Kiro's AIDLC workflow.
+
+PII agent spec, `.kiro/specs/pii-scrubbing-agent/`:
 - `requirements.md` — 46 requirements
 - `design.md` — design plus a senior architecture review (22 findings)
 - `tasks.md` — 9 phases, checkboxes reflect real progress
+
+Explorer spec, `.kiro/specs/genai-architecture-explorer/`:
+- `requirements.md` — 19 requirements, four conflicts with the PII agent's
+  architecture resolved explicitly (CR-1 to CR-4)
+- `design.md` — 17 correctness properties, dependency rules D1–D7
+- `tasks.md` — 15 tasks in 11 execution waves
 
 Two HTML dashboards under `docs/dashboards/`: `requirements-dashboard.html` and
 `docs/dashboards/design-dashboard.html` (the latter has 17 Mermaid diagrams).
@@ -26,14 +41,81 @@ Two HTML dashboards under `docs/dashboards/`: `requirements-dashboard.html` and
 | 4 | **Security core** — PolicyEngine, apply, verify | ✅ |
 | 5 | Agent loop — LangGraph, coarse tools | ✅ |
 | 6 | Streamlit UI | ✅ |
-| 7 | CloudWatch + Windows Event Log adapters | ⬜ next |
-| 8 | Remaining profiles, golden datasets, adversarial suite | ⬜ |
+| 7 | CloudWatch + Windows Event Log adapters | ⬜ deferred |
+| 8 | Remaining profiles, golden datasets, adversarial suite | ✅ |
 
-**844 tests passing, 3 skipped, ~1.4 minutes.**
+Explorer:
+
+| Phase | Task | Content | Status |
+|---|---|---|---|
+| 0 | 1 | Restructure — two product packages, import-direction test | ✅ |
+| 1 | 2 | Storage foundation — Postgres, migrations, object store | ⬜ next |
+| 2 | 3 | Auth and isolation | ⬜ |
+| 3 | 4 | Retention and deletion | ⬜ |
+| 4 | 5 | Observability | ⬜ |
+| 5–14 | 6–15 | Model gateway through MVP acceptance | ⬜ |
+
+**975 tests passing, 3 skipped.** 966 from the PII agent, unchanged in behaviour
+through the restructure, plus 9 architecture tests.
 
 Run: `venv\Scripts\python -m pytest tests\ -q`
 UI: `venv\Scripts\streamlit run apps/pii_agent_app.py --server.address 127.0.0.1`
 Sample files: `data/samples/sample.txt` (3 KB, ~5s) and `data/samples/sample_large.txt` (260 KB, ~110s)
+
+## Repository layout
+
+Two product packages. Everything else is entry points, tests, docs or runtime
+state — the root holds no importable code.
+
+```
+pii_agent/   utils models session profiles core tools agent ui
+explorer/    storage observability llm chunking embeddings retrieval
+             security/{pii_service,llm_assist} prompts policy tools
+             agents memory evaluation api ui
+apps/        pii_agent_app.py  explorer_app.py
+tests/       pii_agent/{unit,security,property,integration,fixtures}
+             explorer/  architecture/
+docs/        *.md plus generated dashboards/; source/ holds the BRD
+data/samples/  demo input
+var/         audit/ scan_workspace/ tmp/ — runtime state, gitignored entirely
+tools_dev/   developer scripts
+```
+
+`pyproject.toml` puts the repo root on the pytest path. Deliberately **not** a
+`src/` layout and no editable install — "clone it, two commands, it runs" is worth
+more here than the convention. `requirements.txt` stays the exact-pinned source of
+truth; `pyproject.toml` declares no dependencies.
+
+`apps/pii_agent_app.py` carries a `sys.path` bootstrap because Streamlit puts the
+*script's* directory on the path, not the repository root.
+
+## Dependency rules D1–D7
+
+Enforced by `tests/architecture/test_import_direction.py`, which walks the AST of
+every module under `pii_agent/` and `explorer/`.
+
+- **D1** `pii_agent` imports nothing from `explorer` — the security product stays
+  independently deployable
+- **D2** `explorer` reaches `pii_agent` only through
+  `explorer.security.pii_service`
+- **D3** `pii_agent.core` imports no LLM library, asserted twice: statically here,
+  and by subprocess `sys.modules` inspection
+- **D4** `pii_agent.core` imports nothing from `agent` or `tools` — keeps the
+  reasoning loop out of the data path
+- **D5** deterministic platform services import nothing from `explorer.agents` or
+  `explorer.llm`
+- **D7** nothing imports a `ui` package; presentation is a leaf
+
+D1, D3, D4 and D7 were each verified by writing a violation, confirming the suite
+failed, then removing it. A rule that has never failed has never been tested. The
+test landed *before* `explorer/` existed, so the new tree has been under the rules
+since its first commit.
+
+The rename exposed exactly the trap the plan predicted: the no-LLM subprocess test
+imported its modules as a comma-separated list, so a mechanical rewrite renamed
+only the first name in the list. It failed loudly rather than passing vacuously,
+and is now one import per line. It was re-verified by adding `import openai` to
+`core/detector.py` — 40+ leaked modules detected — then removing it.
 
 ## The architecture, in one paragraph
 
@@ -244,7 +326,7 @@ and 1.32x at 8 on 12 cores — `re` holds the GIL. A process pool would give a r
 the Cloud demo.
 
 **Evasion resistance is proven for character-level attacks, and has three gaps.**
-`tests/pii_agent/security/test_adversarial_evasion.py` (29 tests) confirms zero-width and
+`tests/pii_agent/security/test_adversarial_evasion.py` (34 tests) confirms zero-width and
 bidi controls, Cyrillic/Greek homoglyphs, full-width digits, lookalike dashes,
 combining marks and case alternation are all defeated — including a stacked attack
 that still produces a verified-clean artifact, which exercises the offset map under
@@ -305,14 +387,24 @@ record, so a floating version would make historical results non-reproducible.
 
 ## Suggested next steps
 
-1. **Phase 7** — CloudWatch and Windows Event Log adapters. Both reuse the proven
-   core; no new policy or offset logic.
-2. **Performance pass** — deduplicate the spaCy work, evaluate disabling the
-   context enhancer, consider chunk parallelism. Arguably higher value than
-   Phase 7 given the throughput gap against the stated use case.
-3. **Phase 8** — remaining profiles (HEALTHCARE, FINANCIAL, PAYMENT_PCI, AI_SAAS
-   are specified but only BASE_SECURITY and DEFAULT_PII exist as YAML), golden
-   datasets keyed to the engine-version tuple.
+Work has moved to the Explorer plan. Task 1 is complete and pushed
+(`17a4256` on `origin/main`).
+
+1. **Explorer task 2 — storage foundation.** Postgres schema and migrations, an
+   object-store protocol with filesystem and S3-compatible adapters, and the
+   content classification registry. The constraint that shapes everything after
+   it: `workspace_id` NOT NULL on every table from the first migration, and every
+   repository method takes it explicitly — no ambient context, no thread-local, no
+   current-workspace global. Retrofitting isolation is how tenant leaks happen.
+2. **Explorer task 3, then 4.** Authentication and the isolation matrix, then
+   retention as a startup precondition. Both deliberately precede any content
+   persistence; neither is credible added afterwards.
+3. **PII agent Phase 7** — CloudWatch and Windows Event Log adapters — is deferred,
+   not dropped. Both reuse the proven core with no new policy or offset logic, so
+   they stay cheap to pick up later.
+
+Four spec questions are still open: the LLM-assist provider, concrete retention
+values, the object store for local development, and who maintains the price table.
 
 ## Watch out for
 
@@ -323,3 +415,19 @@ record, so a floating version would make historical results non-reproducible.
 - The truncation budget is checked *before* each chunk, so at least one chunk
   always runs and the budget must sit below one chunk size (40960) to bite.
 - `re.sub` rejects `\u` escapes in a replacement template — use a literal.
+- **Never use PowerShell `Set-Content` on Markdown.** It writes a BOM and
+  double-encodes em-dashes; it corrupted a spec document once. Write files through
+  the editor or Python with `encoding='utf-8'`.
+- Git is installed but not on `PATH`: `$env:Path += ";C:\Program Files\Git\cmd"`.
+  PowerShell has no heredoc, so `git commit -F <file>` rather than piping.
+- **A Hypothesis example database is keyed on the test's node id.** Moving a test
+  file resets it, so a property that had been passing on cached examples can start
+  failing. That happened during the restructure and the property turned out to be
+  wrong: it asserted a scrubbed value appears nowhere in the output, but an
+  identical substring can legitimately occur at a non-entity position. It is now
+  count-based — if a value occurs N times and M were actioned, at most N − M may
+  remain. Treat a post-move property failure as a possible real finding.
+- **Streamlit does not reload already-imported modules**, and `@st.cache_resource`
+  values survive reruns. After editing anything under `pii_agent/` or `explorer/`,
+  restart the process; a browser refresh is not enough. This presents as "my change
+  did nothing".

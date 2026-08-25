@@ -167,57 +167,57 @@ Task detail follows by phase. Checkboxes reflect real progress.
 
 ## Phase 0 — Restructure
 
-- [ ] 1. Restructure the repository into two product packages
+- [x] 1. Restructure the repository into two product packages
   - Blocking. Every later task assumes these paths.
   - _Requirements: 18.1, 18.3_
   - _Properties: P17_
 
-- [ ] 1.1 Move the eight existing packages under `pii_agent/`
+- [x] 1.1 Move the eight existing packages under `pii_agent/`
   - `git mv` `utils`, `models`, `session`, `profiles`, `core`, `tools`, `agent`, `ui` into `pii_agent/`; add `pii_agent/__init__.py`
   - Expect imports to fail at this step; that is the signal the move is complete
   - _Requirements: 18.1_
 
-- [ ] 1.2 Rewrite import prefixes across source and tests
+- [x] 1.2 Rewrite import prefixes across source and tests
   - Eight prefixes, mechanical: `from core.` becomes `from pii_agent.core.`, and so on for each package
   - Include local imports inside function bodies — the PII agent uses them to defer heavy loads, and a text search for `^from` will miss them
   - Verify: all 966 existing tests pass unchanged in behaviour
   - _Requirements: 18.1_
 
-- [ ] 1.3 Re-establish the no-LLM assertion against the new module names
+- [x] 1.3 Re-establish the no-LLM assertion against the new module names
   - Update the subprocess `sys.modules` test to import `pii_agent.core` and assert no OpenAI or LangChain module is loaded
   - **Verify by deliberately breaking it**: add an LLM import to a core module, confirm the test fails, then remove it. A rename can leave this test passing while asserting nothing, and it is the most important test in the repository
   - _Requirements: 11.9_
   - _Properties: P1_
 
-- [ ] 1.4 Add `pyproject.toml` and move entry points to `apps/`
+- [x] 1.4 Add `pyproject.toml` and move entry points to `apps/`
   - `pyproject.toml` carrying pytest `pythonpath`, coverage gates, and tool config; keep `requirements.txt` as the exact-pinned source of truth
   - Move `app.py` to `apps/pii_agent_app.py`; confirm `streamlit run apps/pii_agent_app.py` starts and scans a sample
   - _Requirements: 18.1_
 
-- [ ] 1.5 Move runtime data and artifacts out of the root
+- [x] 1.5 Move runtime data and artifacts out of the root
   - `audit/` and `scan_workspace/` under `var/`; samples to `data/samples/`; dashboards to `docs/dashboards/`; the BRD and its extraction to `docs/source/`
   - Update `.env.example`, `.gitignore`, and the docs build script for the new paths
   - Verify: startup validation passes with the relocated audit directory
   - _Requirements: 14.1_
 
-- [ ] 1.6 Reorganise tests to mirror the source tree
+- [x] 1.6 Reorganise tests to mirror the source tree
   - `tests/pii_agent/{unit,security,property,integration,fixtures}`; create `tests/explorer/` and `tests/architecture/`
   - Golden files move with their fixtures; confirm the golden suite still resolves its paths
   - _Requirements: 18.1_
 
-- [ ] 1.7 Write the import-direction test enforcing D1–D7
+- [x] 1.7 Write the import-direction test enforcing D1–D7
   - Walk the AST of every module under `pii_agent/` and `explorer/`; assert each import against the dependency table
   - Must fail on: `pii_agent` importing `explorer`; `explorer` importing `pii_agent` outside `explorer.security.pii_service`; `pii_agent.core` importing `agent` or `tools`; any package importing a `ui` package
   - Verify each rule by writing a violation, confirming failure, then removing it. A rule that has never failed has never been tested
   - _Requirements: 18.1, 18.3_
   - _Properties: P17_
 
-- [ ] 1.8 Create the `explorer/` package skeleton
+- [x] 1.8 Create the `explorer/` package skeleton
   - `__init__.py` only, for every package in the target structure. No implementation
   - Deliberately after 1.7, so the new tree is under the rules from its first commit
   - _Requirements: 18.1_
 
-- [ ] 1.9 Update documentation and steering for the new layout
+- [x] 1.9 Update documentation and steering for the new layout
   - `README.md`, `HANDOFF.md`, `docs/*.md`, `.kiro/steering/project.md`
   - Regenerate the HTML docs; confirm cross-document links still resolve
   - _Requirements: 18.1_
